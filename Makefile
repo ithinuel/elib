@@ -12,7 +12,13 @@
 #	See the License for the specific language governing permissions and
 #	limitations under the License.
 
+.PHONY: all clean_all tests clean_tests
 all: tests
+clean_all: clean_tests
 
 tests:
 	@$(MAKE) --no-print-directory -f API/common.mk PROJECT=projects/tests/tests.mk tests
+	
+clean_tests:
+	@$(MAKE) --no-print-directory -f API/common.mk PROJECT=projects/tests/tests.mk clean
+	

@@ -11,3 +11,15 @@
 #	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #	See the License for the specific language governing permissions and
 #	limitations under the License.
+
+CORE_DIR = core
+
+CORE_SRCS = \
+	$(CORE_DIR)/memmgr/memmgr.c
+	
+CORE_CFLAGS += 
+
+DEPS += $(call src_to_dep,$(CORE_SRCS))
+OBJS += $(call src_to_obj,$(CORE_SRCS))
+
+$(call build, $(CORE_SRCS), $(CORE_CFLAGS))

@@ -22,6 +22,8 @@ OBJS_DIR	= $(OUT_DIR)/objs
 MSG_BEGIN	= "-------- target -------"
 MSG_END		= "-----------------------"
 
+CFLAGS += -I API
+
 ###################################
 ## common makefile functions
 src_to_base	= $(basename $(subst /,_,$1))
@@ -104,4 +106,9 @@ end:
 	
 tests: elf
 	@./$(OUT_DIR)/$(PRJ_NAME).elf
+	
+clean:
+	@echo "Making $(OUT_DIR) clean..."
+	-@rm -fr $(OUT_DIR) 2> /dev/null
 
+.PHONY: all elf begin end tests clean

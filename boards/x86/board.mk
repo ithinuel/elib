@@ -17,7 +17,7 @@ BOARD_DIR = boards/x86
 BOARD_SRCS = \
 	$(BOARD_DIR)/main.c
 	
-CFLAGS += 
+CFLAGS += -I $(BOARD_DIR)/configs 
 
 DEPS += $(call src_to_dep,$(BOARD_SRCS))
 OBJS += $(call src_to_obj,$(BOARD_SRCS))
