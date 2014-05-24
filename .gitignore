@@ -25,3 +25,4 @@
 
 # third_party folder.
 /third_party/*
+/build_*
