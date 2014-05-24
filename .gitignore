@@ -17,6 +17,7 @@
 # Executables
 *.exe
 *.out
+*.bin
 *.app
 *.i*86
 *.x86_64
