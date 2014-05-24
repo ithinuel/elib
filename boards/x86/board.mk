@@ -19,6 +19,8 @@ BOARD_SRCS = \
 	
 CFLAGS += -I $(BOARD_DIR)/configs 
 
+include third_party/unity.mk
+
 DEPS += $(call src_to_dep,$(BOARD_SRCS))
 OBJS += $(call src_to_obj,$(BOARD_SRCS))
 

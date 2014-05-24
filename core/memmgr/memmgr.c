@@ -16,6 +16,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include <stddef.h>
 
 #include "os/memmgr.h"
 
@@ -36,5 +37,10 @@ static mm_heap_t gs_heap = {
 /* Functions definitions -----------------------------------------------------*/
 void mm_init(void)
 {
+}
+
+void *mm_alloc(uint32_t size)
+{
+	return NULL;
 }
 

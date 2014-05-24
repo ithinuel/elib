@@ -14,15 +14,31 @@
 	limitations under the License.
 */
 
-#ifndef __OS_MEMMGR_H__
-#define __OS_MEMMGR_H__
+/* Includes ------------------------------------------------------------------*/
+#include "unity_fixture.h"
+#include "os/memmgr.h"
 
-/* Public functions ----------------------------------------------------------*/
-/**
- * Initialise the memory manager.
- */
-void			mm_init			(void);
+/* Test group definitions ----------------------------------------------------*/
+TEST_GROUP(memmgr);
 
-void *			mm_alloc		(uint32_t size);
+TEST_GROUP_RUNNER(memmgr)
+{
+	RUN_TEST_CASE(memmgr, alloc);
+}
 
-#endif
+TEST_SETUP(memmgr)
+{
+
+}
+
+TEST_TEAR_DOWN(memmgr)
+{
+
+}
+
+/* Tests ---------------------------------------------------------------------*/
+TEST(memmgr, alloc)
+{
+	void *ptr = mm_alloc(0);
+	TEST_ASSERT_NULL(ptr);
+}

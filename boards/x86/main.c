@@ -14,10 +14,14 @@
 	limitations under the License.
 */
 
-#include <stdio.h>
+#include "unity_fixture.h"
+
+static void runAllTests()
+{
+    RUN_TEST_GROUP(memmgr);
+}
 
 int main(int argc, char **argv, char **arge)
 {
-	printf("tests ok\n");
-	return 0;
+	return UnityMain(argc, argv, runAllTests);
 }

@@ -15,9 +15,10 @@
 CORE_DIR = core
 
 CORE_SRCS = \
-	$(CORE_DIR)/memmgr/memmgr.c
+	$(CORE_DIR)/memmgr/memmgr.c \
+	$(CORE_DIR)/memmgr/test_memmgr.c
 	
-CORE_CFLAGS += 
+CORE_CFLAGS +=
 
 DEPS += $(call src_to_dep,$(CORE_SRCS))
 OBJS += $(call src_to_obj,$(CORE_SRCS))
