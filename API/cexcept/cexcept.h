@@ -14,12 +14,18 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
+#ifndef __CEXCEPT_CEXCEPT_H__
+#define __CEXCEPT_CEXCEPT_H__
 
-/* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+/* Includes ------------------------------------------------------------------*/
+#include <stdbool.h>
 
+/* Public declarations -------------------------------------------------------*/
+struct cexcept
+{
+	const char *	type;
+	const char *	message;
+	bool		is_dynamic;
+
+};
 #endif

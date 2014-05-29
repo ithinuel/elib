@@ -11,3 +11,15 @@
 #	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #	See the License for the specific language governing permissions and
 #	limitations under the License.
+
+OS_DIR = os/Unix
+
+OS_SRCS = \
+	$(OS_DIR)/task.c \
+	
+OS_CFLAGS +=  
+
+DEPS += $(call src_to_dep,$(OS_SRCS))
+OBJS += $(call src_to_obj,$(OS_SRCS))
+
+$(call build, $(OS_SRCS), $(OS_CFLAGS))

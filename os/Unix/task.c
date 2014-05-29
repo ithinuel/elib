@@ -14,12 +14,19 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
+/* Includes ------------------------------------------------------------------*/
+#include <stddef.h>
+#include "os/task.h"
 
-/* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+static cexcept_ctx_t *gs_ctx = NULL;
 
-#endif
+/* Functions definitions -----------------------------------------------------*/
+cexcept_ctx_t *task_cexcept_get_ctx(void)
+{
+	return gs_ctx;
+}
+
+void task_cexcept_set_ctx(cexcept_ctx_t *ctx)
+{
+	gs_ctx = ctx;
+}

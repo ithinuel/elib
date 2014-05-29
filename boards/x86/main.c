@@ -14,11 +14,38 @@
 	limitations under the License.
 */
 
+#include <stdbool.h>
 #include "unity_fixture.h"
+
+#include "common/tests.h"
 
 static void runAllTests()
 {
-    RUN_TEST_GROUP(memmgr);
+	RUN_TEST_GROUP(memmgr);
+	RUN_TEST_GROUP(cexcept);
+}
+
+static bool gs_die_expected = false;
+void die(const char *reason)
+{
+	if (gs_die_expected) {
+		gs_die_expected = false;
+		longjmp(g_on_die, 1);
+	} else {
+		TEST_FAIL_MESSAGE(reason);
+	}
+}
+
+void die_Expect(void)
+{
+	gs_die_expected = true;
+}
+
+void die_Verify(void)
+{
+	if (gs_die_expected) {
+		TEST_FAIL_MESSAGE("This test should have died");
+	}
 }
 
 int main(int argc, char **argv, char **arge)

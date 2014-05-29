@@ -15,6 +15,7 @@
 BOARD_DIR = boards/x86
 
 BOARD_SRCS = \
+	$(BOARD_DIR)/cexcept.c \
 	$(BOARD_DIR)/main.c
 	
 CFLAGS += -I $(BOARD_DIR)/configs 

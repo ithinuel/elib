@@ -22,7 +22,17 @@ OBJS_DIR	= $(OUT_DIR)/objs
 MSG_BEGIN	= "-------- target -------"
 MSG_END		= "-----------------------"
 
-CFLAGS += -I API
+DEBUG=gdb
+DEBUG_LVL=3
+OPT = 0
+CSTANDARD = gnu99
+
+CFLAGS += \
+	-Wall \
+	-g$(DEBUG)$(DEBUG_LVL) \
+	-O$(OPT) \
+	-std=$(CSTANDARD) \
+	-I API
 
 ###################################
 ## common makefile functions
@@ -100,7 +110,7 @@ begin:
 
 $(OUT_DIR)/$(PRJ_NAME).elf: $(OBJS) $(LDSCRIPT)
 	@echo "Linking ..."
-	@$(CC) $(CFLAGS) $(LINKER_FLAGS) $(OBJS) -o$(OUT_DIR)/$(PRJ_NAME).elf
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o$(OUT_DIR)/$(PRJ_NAME).elf
 end:
 	@echo $(MSG_END)
 	

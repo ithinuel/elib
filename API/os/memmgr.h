@@ -17,12 +17,22 @@
 #ifndef __OS_MEMMGR_H__
 #define __OS_MEMMGR_H__
 
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+
+/* Public types --------------------------------------------------------------*/
+
 /* Public functions ----------------------------------------------------------*/
 /**
  * Initialise the memory manager.
  */
 void			mm_init			(void);
+/**
+ * Check heap integrity.
+ */
+void			mm_check		(void);
 
-void *			mm_alloc		(uint32_t size);
+void *			mm_zalloc		(uint32_t size);
+void			mm_free			(void *ptr);
 
 #endif

@@ -14,12 +14,18 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
+#ifndef __COMMON_TASK_H__
+#define __COMMON_TASK_H__
 
+/* Public forward declarations -----------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
+#include "common/cexcept.h"
+
+/* Public types --------------------------------------------------------------*/
 /* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+/* Public variables ----------------------------------------------------------*/
+/* Public prototypes ---------------------------------------------------------*/
+cexcept_ctx_t *		task_cexcept_get_ctx		(void);
+void			task_cexcept_set_ctx		(cexcept_ctx_t *);
 
 #endif

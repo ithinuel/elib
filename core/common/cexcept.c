@@ -14,12 +14,20 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
 
-/* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+/* Includes ------------------------------------------------------------------*/
+#include <stddef.h>
+#include "cexcept/cexcept.h"
+#include "common/cexcept.h"
+#include "os/task.h"
 
-#endif
+/* Public functions ----------------------------------------------------------*/
+const char *cexcept_type(cexcept_t *exception)
+{
+	return exception->type;
+}
+
+const char *cexcept_message(cexcept_t *exception)
+{
+	return exception->message;
+}

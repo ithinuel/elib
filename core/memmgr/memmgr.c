@@ -14,33 +14,123 @@
 	limitations under the License.
 */
 
+/* Features :
+ * memory corruption detection.
+ * low footprint.
+ * allocation traceability.
+ */
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
 
+#include "common/common.h"
 #include "os/memmgr.h"
 
 #include "memmgr_conf.h"
 
+/* Macro definitions ---------------------------------------------------------*/
 /* Type definitions ----------------------------------------------------------*/
 typedef struct
 {
-	void	*first_free;
-	uint8_t	raw[MM_CFG_HEAP_SIZE] __attribute__((aligned(MM_CFG_ALIGNMENT)));;
+	uint16_t	prev_size:15;
+	bool		allocated:1;
+	uint16_t	size:15;
+#if MM_CFG_INTEGRITY > 0
+	uint16_t	xorsum;
+#endif
+} mm_chunk_t;
+
+typedef struct
+{
+	mm_chunk_t	*first_free;
+	uint8_t		raw[MM_CFG_HEAP_SIZE] __attribute__((aligned(MM_CFG_ALIGNMENT)));
 } mm_heap_t;
 
 /* Prototypes ----------------------------------------------------------------*/
+static mm_chunk_t *		mm_next_get		(mm_chunk_t *chunk);
+#if MM_CFG_INTEGRITY > 0
+static void			mm_check_integrity	(mm_chunk_t *chunk);
+#endif
+
 /* Variables -----------------------------------------------------------------*/
-static mm_heap_t gs_heap = {
-};
+static mm_heap_t gs_heap;
+#if MM_CFG_INTEGRITY > 0
+static const uint8_t const gscc_footer[] = "EN";
+#endif
+
+/* Private Functions definitions ---------------------------------------------*/
+static mm_chunk_t *mm_next_get(mm_chunk_t *chunk)
+{
+	if (chunk == NULL) {
+		return NULL;
+	}
+	uint8_t *raw_ptr = (uint8_t *)chunk;
+	raw_ptr += chunk->size*MM_CFG_ALIGNMENT;
+#if MM_CFG_INTEGRITY > 0
+	raw_ptr += (sizeof(gscc_footer)/MM_CFG_ALIGNMENT);
+	mm_check_integrity((mm_chunk_t *)raw_ptr);
+#endif
+
+	return (mm_chunk_t *)raw_ptr;
+}
+
+#if MM_CFG_INTEGRITY > 0
+static void mm_check_integrity(mm_chunk_t *chunk)
+{
+
+	// chunk must :
+	// be in bounds of gs_heap.raw
+	// have a valid header chksum
+	// have a valid footer signature
+}
+#endif
 
 /* Functions definitions -----------------------------------------------------*/
 void mm_init(void)
 {
+	mm_chunk_t *chunk = (mm_chunk_t *)gs_heap.raw;
+	gs_heap.first_free = chunk;
+
+	uint32_t prev_size = 0;
+	uint32_t heap_size = MM_CFG_HEAP_SIZE/MM_CFG_ALIGNMENT;
+
+	while (heap_size > (sizeof(mm_chunk_t)/MM_CFG_ALIGNMENT)) {
+		uint16_t size = umin(heap_size, UINT16_MAX/2);
+		heap_size -= size;
+
+		chunk->allocated = false;
+		chunk->prev_size = prev_size;
+		chunk->size = size;
+
+		prev_size = size;
+		chunk = mm_next_get(chunk);
+	}
 }
 
-void *mm_alloc(uint32_t size)
+void mm_check(void)
 {
-	return NULL;
+#if MM_CFG_INTEGRITY > 0
+	mm_chunk_t *chunk = (mm_chunk_t *)gs_heap.raw;
+	mm_check_integrity(chunk);
+	while (chunk != NULL) {
+		chunk = mm_next_get(chunk);
+	}
+#endif
 }
 
+void *mm_zalloc(uint32_t size)
+{
+	void *ptr = malloc(size);
+	if (ptr != NULL) {
+		memset(ptr, 0, size);
+	}
+	return ptr;
+}
+
+void mm_free(void *ptr)
+{
+	free(ptr);
+}

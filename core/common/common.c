@@ -14,12 +14,12 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
 
-/* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+/* Includes ------------------------------------------------------------------*/
+#include "common/common.h"
 
-#endif
+/* Public functions ----------------------------------------------------------*/
+uint32_t umin(uint32_t a, uint32_t b)
+{
+	return (a<b)? a : b;
+}

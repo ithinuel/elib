@@ -14,12 +14,23 @@
 	limitations under the License.
 */
 
-#ifndef __MEMMGR_CONF_H__
-#define __MEMMGR_CONF_H__
+#ifndef __COMMON_TESTS_H__
+#define __COMMON_TESTS_H__
 
-/* Public macros -------------------------------------------------------------*/
-#define		MM_CFG_ALIGNMENT	(4)
-#define		MM_CFG_HEAP_SIZE	(256*1024)
-#define		MM_CFG_INTEGRITY	(1)
+/* Includes ------------------------------------------------------------------*/
+#include <setjmp.h>
+#include <stdint.h>
+
+#define VERIFY_DIE_START \
+	if (setjmp(g_on_die)==0) {
+#define VERIFY_DIE_END \
+	}
+
+/* Public functions ----------------------------------------------------------*/
+void				die_Expect			(void);
+void				die_Verify			(void);
+
+/* Public variables ----------------------------------------------------------*/
+extern jmp_buf g_on_die;
 
 #endif
