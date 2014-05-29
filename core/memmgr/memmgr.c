@@ -54,12 +54,18 @@ static mm_chunk_t *		mm_next_get		(mm_chunk_t *chunk);
 #if MM_CFG_INTEGRITY > 0
 static void			mm_check_integrity	(mm_chunk_t *chunk);
 #endif
+static void *			mm_zalloc_impl		(uint32_t size);
+static void 			mm_free_impl		(void *ptr);
+
 
 /* Variables -----------------------------------------------------------------*/
 static mm_heap_t gs_heap;
 #if MM_CFG_INTEGRITY > 0
 static const uint8_t const gscc_footer[] = "EN";
 #endif
+
+MOCKABLE mm_zalloc_f mm_zalloc = mm_zalloc_impl;
+MOCKABLE mm_free_f mm_free = mm_free_impl;
 
 /* Private Functions definitions ---------------------------------------------*/
 static mm_chunk_t *mm_next_get(mm_chunk_t *chunk)
@@ -70,7 +76,8 @@ static mm_chunk_t *mm_next_get(mm_chunk_t *chunk)
 	uint8_t *raw_ptr = (uint8_t *)chunk;
 	raw_ptr += chunk->size*MM_CFG_ALIGNMENT;
 #if MM_CFG_INTEGRITY > 0
-	raw_ptr += (sizeof(gscc_footer)/MM_CFG_ALIGNMENT);
+	div_t d = div(sizeof(gscc_footer), MM_CFG_ALIGNMENT);
+	raw_ptr += d.quot + (d.rem != 0);
 	mm_check_integrity((mm_chunk_t *)raw_ptr);
 #endif
 
@@ -80,11 +87,14 @@ static mm_chunk_t *mm_next_get(mm_chunk_t *chunk)
 #if MM_CFG_INTEGRITY > 0
 static void mm_check_integrity(mm_chunk_t *chunk)
 {
-
 	// chunk must :
 	// be in bounds of gs_heap.raw
+	if ((gs_heap.raw < (uint8_t*)chunk) ||
+	    ((uint8_t*)chunk < (gs_heap.raw+MM_CFG_HEAP_SIZE))) {
+		die("MM: out of bound");
+	}
+
 	// have a valid header chksum
-	// have a valid footer signature
 }
 #endif
 
@@ -121,16 +131,12 @@ void mm_check(void)
 #endif
 }
 
-void *mm_zalloc(uint32_t size)
+static void *mm_zalloc_impl(uint32_t size)
 {
-	void *ptr = malloc(size);
-	if (ptr != NULL) {
-		memset(ptr, 0, size);
-	}
-	return ptr;
+	return NULL;
 }
 
-void mm_free(void *ptr)
+void mm_free_impl(void *ptr)
 {
-	free(ptr);
+
 }

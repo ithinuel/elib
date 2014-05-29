@@ -14,31 +14,12 @@
 	limitations under the License.
 */
 
+#ifndef __COMMON_MOCKABLE_H__
+#define __COMMON_MOCKABLE_H__
+
 /* Includes ------------------------------------------------------------------*/
-#include "unity_fixture.h"
-#include "os/memmgr.h"
+#include "mockable_conf.h"
 
-/* Test group definitions ----------------------------------------------------*/
-TEST_GROUP(memmgr);
+/* Public macros -------------------------------------------------------------*/
 
-TEST_GROUP_RUNNER(memmgr)
-{
-	RUN_TEST_CASE(memmgr, alloc);
-}
-
-TEST_SETUP(memmgr)
-{
-	mm_init();
-}
-
-TEST_TEAR_DOWN(memmgr)
-{
-
-}
-
-/* Tests ---------------------------------------------------------------------*/
-TEST(memmgr, alloc)
-{
-	void *ptr = mm_zalloc(0);
-	//TEST_ASSERT_NULL(ptr);
-}
+#endif

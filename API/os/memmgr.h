@@ -19,20 +19,23 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include "common/mockable.h"
 
 /* Public types --------------------------------------------------------------*/
+typedef void *		(* mm_zalloc_f)			(uint32_t size);
+typedef void		(* mm_free_f)			(void *ptr);
 
 /* Public functions ----------------------------------------------------------*/
 /**
  * Initialise the memory manager.
  */
-void			mm_init			(void);
+void			mm_init				(void);
 /**
  * Check heap integrity.
  */
-void			mm_check		(void);
+void			mm_check			(void);
 
-void *			mm_zalloc		(uint32_t size);
-void			mm_free			(void *ptr);
+MOCKABLE mm_zalloc_f mm_zalloc;
+MOCKABLE mm_free_f mm_free;
 
 #endif

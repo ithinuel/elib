@@ -33,7 +33,7 @@ struct cexcept_ctx
 	uint8_t		state;
 
 	cexcept_t	excpt;
-	bool		flying;
+	bool		excpt_is_set;
 };
 
 /* Public functions ----------------------------------------------------------*/
@@ -45,13 +45,13 @@ void cexcept_throw(const char *type, const char *message, bool is_dynamic)
 		die("Throw without context");
 	}
 
-	if (cur->flying && cur->excpt.is_dynamic) {
+	if (cur->excpt_is_set && cur->excpt.is_dynamic) {
 		mm_free((void *)cur->excpt.message);
 	}
 	cur->excpt.type = type;
 	cur->excpt.message = message;
 	cur->excpt.is_dynamic = false;
-	cur->flying = true;
+	cur->excpt_is_set = true;
 	longjmp(cur->jmpbuf, cur->state);
 }
 
@@ -62,7 +62,7 @@ void *cexcept_enter_ctx(void)
 		cexcept_throw("NOMEM", "no memory available to enter cexcept ctx.", false);
 	}
 	new->prev = task_cexcept_get_ctx();
-	new->flying = false;
+	new->excpt_is_set = false;
 	new->state = 1;
 	task_cexcept_set_ctx(new);
 
@@ -72,12 +72,12 @@ void *cexcept_enter_ctx(void)
 cexcept_t *cexcept_catch(void)
 {
 	cexcept_ctx_t *ctx = task_cexcept_get_ctx();
-	ctx->state = 2;
-	if (ctx->flying) {
-		ctx->flying = false;
-		return &ctx->excpt;
+	if (ctx == NULL) {
+		die("Catch without context");
 	}
-	return NULL;
+	ctx->state = 2;
+	ctx->excpt_is_set = false;
+	return &ctx->excpt;
 }
 
 void cexcept_finally(void)
@@ -86,27 +86,26 @@ void cexcept_finally(void)
 	if (ctx == NULL) {
 		die("Finally without context");
 	}
-	ctx->state = 3;
 }
 
 
 void cexcept_exit_ctx(void)
 {
-	bool flying = false;
-	cexcept_t ex = {0};
+	bool		excpt_is_set = false;
+	cexcept_t	ex = {0};
 	cexcept_ctx_t	*cur = task_cexcept_get_ctx(),
 			*prev = NULL;
 	if (cur == NULL) {
 		die("Exit without context");
 	}
 
-	flying = cur->flying;
+	excpt_is_set = cur->excpt_is_set;
 	ex = cur->excpt;
 	prev = cur->prev;
 	task_cexcept_set_ctx(prev);
 
 	mm_free(cur);
-	if (flying) {
+	if (excpt_is_set) {
 		cexcept_throw(ex.type, ex.message, ex.is_dynamic);
 	}
 }

@@ -32,8 +32,8 @@ typedef struct cexcept_ctx	cexcept_ctx_t;
  */
 #define		Try \
 	{ \
-		void *buf = cexcept_enter_ctx(); \
-		switch (cexcept_jump(buf)) { \
+		void *__buf = cexcept_enter_ctx(); \
+		switch (cexcept_jump(__buf)) { \
 		case 0: \
 		{ \
 			do
@@ -61,7 +61,7 @@ typedef struct cexcept_ctx	cexcept_ctx_t;
 			break; \
 		} \
 		cexcept_finally(); \
-		switch(cexcept_jump(buf)) { \
+		switch(cexcept_jump(__buf)) { \
 		case 0: \
 		{ \
 			do

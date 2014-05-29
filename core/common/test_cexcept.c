@@ -20,6 +20,7 @@
 #include "common/cexcept.h"
 
 #include "tests/tests.h"
+#include "tests/mock_memmgr.h"
 
 /* Helper functions and variables --------------------------------------------*/
 bool did_try_start = false;
@@ -42,6 +43,11 @@ TEST_GROUP(cexcept);
 
 TEST_GROUP_RUNNER(cexcept) {
 	RUN_TEST_CASE(cexcept, Throw_alone);
+	RUN_TEST_CASE(cexcept, Try_Fail_to_alloc);
+	RUN_TEST_CASE(cexcept, Catch_without_ctx);
+	RUN_TEST_CASE(cexcept, Finally_without_ctx);
+	RUN_TEST_CASE(cexcept, EndTry_without_ctx)
+
 	RUN_TEST_CASE(cexcept, Try_EndTry);
 	RUN_TEST_CASE(cexcept, Try_Throw_EndTry);
 	RUN_TEST_CASE(cexcept, Try_Catch_EndTry);
@@ -65,7 +71,9 @@ TEST_GROUP_RUNNER(cexcept) {
 
 }
 
-TEST_SETUP(cexcept) {did_try_start = false;
+TEST_SETUP(cexcept)
+{
+	mock_memmgr_setup();
 	did_try_start = false;
 	did_try_end = false;
 	did_catch_start = false;
@@ -85,6 +93,67 @@ TEST(cexcept, Throw_alone)
 
 	VERIFY_DIE_START
 	do_something(true);
+	VERIFY_DIE_END
+
+	die_Verify();
+}
+TEST(cexcept, Try_Fail_to_alloc)
+{
+//	mm_Expect(false);
+}
+TEST(cexcept, Catch_without_ctx)
+{
+	die_Expect();
+	VERIFY_DIE_START
+	switch(1)
+	{
+	case 0:
+	{
+		do {}
+	Catch {
+
+	}
+	while(0);
+		break;
+	}
+	}
+	VERIFY_DIE_END
+
+	die_Verify();
+}
+TEST(cexcept, Finally_without_ctx)
+{
+	jmp_buf __buf;
+
+	die_Expect();
+	VERIFY_DIE_START
+	switch(1)
+	{
+	case 0:
+	{
+		do {}
+	Finally {
+
+	}
+	while(0);
+		break;
+	}
+	}
+	VERIFY_DIE_END
+
+	die_Verify();
+}
+TEST(cexcept, EndTry_without_ctx)
+{
+	die_Expect();
+	VERIFY_DIE_START
+	{
+	switch(1)
+	{
+	case 0:
+	{
+		do {}
+	EndTry
 	VERIFY_DIE_END
 
 	die_Verify();

@@ -14,31 +14,9 @@
 	limitations under the License.
 */
 
-/* Includes ------------------------------------------------------------------*/
-#include "unity_fixture.h"
-#include "os/memmgr.h"
+#ifndef __X86_MOCKABLE_CONF_H__
+#define __X86_MOCKABLE_CONF_H__
 
-/* Test group definitions ----------------------------------------------------*/
-TEST_GROUP(memmgr);
+#define MOCKABLE
 
-TEST_GROUP_RUNNER(memmgr)
-{
-	RUN_TEST_CASE(memmgr, alloc);
-}
-
-TEST_SETUP(memmgr)
-{
-	mm_init();
-}
-
-TEST_TEAR_DOWN(memmgr)
-{
-
-}
-
-/* Tests ---------------------------------------------------------------------*/
-TEST(memmgr, alloc)
-{
-	void *ptr = mm_zalloc(0);
-	//TEST_ASSERT_NULL(ptr);
-}
+#endif
