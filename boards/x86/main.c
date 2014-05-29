@@ -17,7 +17,7 @@
 #include <stdbool.h>
 #include "unity_fixture.h"
 
-#include "common/tests.h"
+#include "tests/tests.h"
 
 static void runAllTests()
 {

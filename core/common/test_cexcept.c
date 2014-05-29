@@ -19,7 +19,7 @@
 #include "unity_fixture.h"
 #include "common/cexcept.h"
 
-#include "common/tests.h"
+#include "tests/tests.h"
 
 /* Helper functions and variables --------------------------------------------*/
 bool did_try_start = false;
