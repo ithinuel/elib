@@ -116,6 +116,9 @@ end:
 	
 tests: elf
 	@./$(OUT_DIR)/$(PRJ_NAME).elf
+	@mkdir -p $(OUT_DIR)/gcov
+	@gcovr --gcov-exclude=third_party* --gcov-exclude=boards#unity* -k --html --html-details -o $(OUT_DIR)/gcov/gcovr.html
+	
 	
 clean:
 	@echo "Making $(OUT_DIR) clean..."

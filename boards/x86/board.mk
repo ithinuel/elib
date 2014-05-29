@@ -18,7 +18,7 @@ BOARD_SRCS = \
 	$(BOARD_DIR)/cexcept.c \
 	$(BOARD_DIR)/main.c
 	
-CFLAGS += -I $(BOARD_DIR)/configs 
+CFLAGS += -I $(BOARD_DIR)/configs -fprofile-arcs -ftest-coverage
 
 include third_party/unity.mk
 
