@@ -23,6 +23,7 @@ static void runAllTests()
 {
 	RUN_TEST_GROUP(memmgr);
 	RUN_TEST_GROUP(cexcept);
+	RUN_TEST_GROUP(object);
 }
 
 static bool gs_die_expected = false;

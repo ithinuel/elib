@@ -16,6 +16,8 @@ CORE_DIR = core
 
 CORE_SRCS = \
 	$(CORE_DIR)/common/common.c \
+	$(CORE_DIR)/common/object.c \
+	$(CORE_DIR)/common/test_object.c \
 	$(CORE_DIR)/memmgr/memmgr.c \
 	$(CORE_DIR)/memmgr/test_memmgr.c \
 	$(CORE_DIR)/common/cexcept.c \
