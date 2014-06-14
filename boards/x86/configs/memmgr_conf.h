@@ -19,7 +19,9 @@
 
 /* Public macros -------------------------------------------------------------*/
 #define		MM_CFG_ALIGNMENT	(4)
+#define		MM_CFG_MIN_PAYLOAD	(1)
 #define		MM_CFG_HEAP_SIZE	(256*1024)
 #define		MM_CFG_INTEGRITY	(1)
+#define		MM_CFG_GUARD_SIZE	(1)
 
 #endif

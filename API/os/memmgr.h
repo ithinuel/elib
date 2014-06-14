@@ -34,6 +34,7 @@ void			mm_init				(void);
  * Check heap integrity.
  */
 void			mm_check			(void);
+void			mm_print			(void);
 
 MOCKABLE mm_zalloc_f mm_zalloc;
 MOCKABLE mm_free_f mm_free;
