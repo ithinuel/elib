@@ -35,22 +35,6 @@ void eval_not_null_aligned_and_filled(void *ptr, int32_t size, uint8_t val, char
 	}
 }
 
-void eval_print_stats(void)
-{
-	uint32_t nb = mm_nb_chunk()+1;
-	mm_stats_t *stats = mm_calloc(nb, sizeof(mm_stats_t));
-	mm_chunk_info(stats, nb);
-
-	for (uint32_t i = 0; i < nb; i++) {
-		printf("%5s|%6d|%6d\n",
-			stats[i].allocated?"true":"false",
-			stats[i].size,
-			stats[i].total_size);
-	}
-
-	mm_free(stats);
-}
-
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr);
 
@@ -60,6 +44,7 @@ TEST_GROUP_RUNNER(memmgr)
 	RUN_TEST_CASE(memmgr, overflow);
 	RUN_TEST_CASE(memmgr, realloc_expand);
 	RUN_TEST_CASE(memmgr, realloc_shrink);
+	RUN_TEST_CASE(memmgr, infos);
 }
 
 TEST_SETUP(memmgr)
@@ -94,11 +79,16 @@ TEST(memmgr, zalloc_free)
 	mm_free(ptr1);
 	mm_free(ptr2);
 
-	ptr1 = mm_zalloc(32);
-	ptr2 = mm_zalloc(131012);
-	ptr3 = mm_zalloc(32);
+	ptr1 = mm_zalloc(31);
+	TEST_ASSERT_NOT_NULL(ptr1);
+	ptr2 = mm_zalloc(130877);
+	TEST_ASSERT_NOT_NULL(ptr2);
+	ptr3 = mm_zalloc(29);
+	TEST_ASSERT_NOT_NULL(ptr3);
 	ptr4 = mm_zalloc(22);
-	ptr5 = mm_zalloc(130976);
+	TEST_ASSERT_NOT_NULL(ptr4);
+	ptr5 = mm_zalloc(131048);
+	TEST_ASSERT_NOT_NULL(ptr5);
 	TEST_ASSERT_NULL(mm_zalloc(1));
 
 	mm_free(ptr5);
@@ -175,4 +165,28 @@ TEST(memmgr, realloc_shrink)
 	mm_free(ptr2);
 	mm_free(ptr3);
 	mm_free(ptr4);
+}
+
+TEST(memmgr, infos)
+{
+	uint32_t base = MM_CFG_HEAP_SIZE/(UINT15_MAX*MM_CFG_ALIGNMENT);
+	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
+
+	mm_stats_t *stats = mm_calloc(3, sizeof(mm_stats_t));
+	mm_allocator_set(stats);
+	TEST_ASSERT_NOT_NULL(stats);
+	TEST_ASSERT_EQUAL_INT(base+1, mm_nb_chunk());
+
+	mm_chunk_info(stats, base+1);
+	for (int32_t i = 0; i < (base+1); i++) {
+		if (i == 0) {
+			TEST_ASSERT_TRUE(stats[i].allocated);
+			TEST_ASSERT_EQUAL_UINT32(sizeof(mm_stats_t)*(base+1), stats[i].size);
+		} else {
+			TEST_ASSERT_FALSE(stats[i].allocated);
+			TEST_ASSERT_EQUAL_UINT32(0, stats[i].size);
+		}
+	}
+	mm_free(stats);
+	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
 }

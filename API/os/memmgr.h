@@ -23,20 +23,24 @@
 
 #include "common/mockable.h"
 
+/* macros --------------------------------------------------------------------*/
+#define UINT15_MAX		(32767)
+
 /* Public types --------------------------------------------------------------*/
-typedef void *		(* mm_alloc_f)			(uint32_t total_size);
+typedef void *		(* mm_alloc_f)			(uint32_t total_csize);
 typedef void *		(* mm_calloc_f)			(uint32_t n,
-							 uint32_t total_size);
+							 uint32_t total_csize);
 typedef void *		(* mm_realloc_f)		(void *old_ptr,
-							 uint32_t total_size);
+							 uint32_t total_csize);
 typedef void		(* mm_free_f)			(void *ptr);
 
 typedef struct
 {
 	uint32_t	size;
-	uint32_t	total_size;
+	uint16_t	total_csize;
 	bool		allocated;
-}	mm_stats_t;
+	void *		allocator;
+} mm_stats_t;
 
 /* Public functions ----------------------------------------------------------*/
 /**
@@ -54,6 +58,7 @@ void			mm_check			(void);
 uint32_t		mm_nb_chunk			(void);
 void			mm_chunk_info			(mm_stats_t *stats,
 							 uint32_t size);
+void			mm_allocator_set		(void *ptr);
 
 MOCKABLE mm_alloc_f	mm_alloc;
 MOCKABLE mm_alloc_f	mm_zalloc;

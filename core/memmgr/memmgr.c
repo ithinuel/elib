@@ -26,7 +26,6 @@
 
 /* Macro definitions ---------------------------------------------------------*/
 #define MM_TO_CSIZE(size)	((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT)
-#define UINT15_MAX		(32767)
 #define MM_GUARD_PAD		(48)
 
 /* Type definitions ----------------------------------------------------------*/
@@ -39,6 +38,8 @@ typedef struct
 
 	uint16_t	size:15;
 	uint32_t	guard_offset:17;
+
+	void *		allocator;
 } mm_chunk_t;
 
 typedef struct
@@ -69,7 +70,7 @@ static mm_chunk_t *		mm_tochunk		(void *ptr);
 static uint16_t			mm_header_csize		(void);
 static uint16_t			mm_min_csize		(void);
 
-static uint32_t			mm_aggregate		(mm_chunk_t *this,
+static uint32_t			mm_chunk_aggregate		(mm_chunk_t *this,
 							 bool dry_run);
 
 static mm_chunk_t *		mm_find_first_free	(uint16_t wanted_size);
@@ -224,6 +225,7 @@ static mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 	new->prev_size = this->size;
 	new->size = new_size;
 	new->allocated = false;
+	new->allocator = 0;
 	mm_chunk_guard_set(new, 0);
 	new->xorsum = mm_chunk_xorsum(new);
 
@@ -247,16 +249,23 @@ static mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 
 static uint16_t mm_chunk_xorsum(mm_chunk_t *this)
 {
-	return this->allocated ^ this->guard_offset ^ this->prev_size ^ this->size ^ (((uintptr_t)this) & 0xFFFF);
+	return	this->allocated ^
+		this->guard_offset ^
+		this->prev_size ^
+		this->size ^
+		(((uintptr_t)this) & 0xFFFF) ^
+		(((uintptr_t)this->allocator >> 16) & 0xFFFF) ^
+		((uintptr_t)this->allocator & 0xFFFF);
 }
 
 static void mm_chunk_delete(mm_chunk_t *this)
 {
 	this->allocated = false;
+	this->allocator = 0;
 	mm_chunk_guard_set(this, 0);
 	this->xorsum = mm_chunk_xorsum(this);
 
-	mm_aggregate(this, false);
+	mm_chunk_aggregate(this, false);
 }
 
 static void mm_chunk_merge(mm_chunk_t *this)
@@ -279,7 +288,7 @@ static void mm_chunk_merge(mm_chunk_t *this)
 	}
 }
 
-static uint32_t mm_aggregate(mm_chunk_t *this, bool dry_run)
+static uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 {
 	mm_chunk_t *prev = mm_chunk_prev_get(this);
 	mm_chunk_t *next = mm_chunk_next_get(this);
@@ -341,6 +350,7 @@ static void *mm_alloc_impl(uint32_t size)
 
 		chnk->allocated = true;
 		mm_chunk_guard_set(chnk, size);
+		chnk->allocator = __builtin_return_address(1);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 		ptr = mm_toptr(chnk);
 	}
@@ -352,13 +362,18 @@ static void *mm_zalloc_impl(uint32_t size)
 	void *ptr = mm_alloc(size);
 	if (ptr != NULL) {
 		memset(ptr, 0, size);
+		mm_allocator_set(ptr);
 	}
 	return ptr;
 }
 
 static void *mm_calloc_impl(uint32_t n, uint32_t size)
 {
-	return mm_zalloc(n * size);
+	void *ptr = mm_zalloc(n * size);
+	if (ptr != NULL) {
+		mm_allocator_set(ptr);
+	}
+	return ptr;
 }
 
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
@@ -378,13 +393,14 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		return NULL;
 	}
 
-	available_on_current = mm_aggregate(chnk, true);
+	available_on_current = mm_chunk_aggregate(chnk, true);
 
 	if (available_on_current >= wanted_size) {
 		/* we're ok to merge & shrink this chunk*/
-		mm_aggregate(chnk, false);
+		mm_chunk_aggregate(chnk, false);
 		mm_chunk_guard_set(chnk, size);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
+
 		mm_chunk_split(chnk, wanted_size);
 		new_ptr = mm_toptr(chnk);
 	} else {
@@ -392,9 +408,12 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		if (new_ptr != NULL) {
 			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
 		}
+		chnk = mm_tochunk(new_ptr);
 		mm_free(old_ptr);
 	}
 
+	chnk->allocator = __builtin_return_address(1);
+	chnk->xorsum = mm_chunk_xorsum(chnk);
 	return new_ptr;
 }
 
@@ -423,6 +442,7 @@ void mm_init(void)
 		heap_size -= size;
 
 		chnk->allocated = false;
+		chnk->allocator = 0;
 		chnk->size = size;
 		if (prev != NULL) {
 			chnk->prev_size = prev->size;
@@ -463,10 +483,19 @@ void mm_chunk_info(mm_stats_t *stats, uint32_t size)
 
 	do {
 		stats[cnt].allocated = chnk->allocated;
+		stats[cnt].allocator = chnk->allocator;
 		stats[cnt].size = chnk->guard_offset;
-		stats[cnt].total_size = chnk->size * MM_CFG_ALIGNMENT;
+		stats[cnt].total_csize = chnk->size;
 
 		cnt ++;
 		chnk = mm_chunk_next_get(chnk);
 	} while ((chnk != NULL) && (cnt < size));
+}
+
+
+void mm_allocator_set(void *ptr)
+{
+	mm_chunk_t *chnk = mm_tochunk(ptr);
+	chnk->allocator = __builtin_return_address(1);
+	chnk->xorsum = mm_chunk_xorsum(chnk);
 }
