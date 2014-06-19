@@ -22,7 +22,9 @@
 #include "common/mockable.h"
 
 /* Public types --------------------------------------------------------------*/
-typedef void *		(* mm_zalloc_f)			(uint32_t size);
+typedef void *		(* mm_alloc_f)			(uint32_t size);
+typedef void *		(* mm_realloc_f)		(void *old_ptr,
+							 uint32_t size);
 typedef void		(* mm_free_f)			(void *ptr);
 
 /* Public functions ----------------------------------------------------------*/
@@ -34,9 +36,10 @@ void			mm_init				(void);
  * Check heap integrity.
  */
 void			mm_check			(void);
-void			mm_print			(void);
 
-MOCKABLE mm_zalloc_f mm_zalloc;
-MOCKABLE mm_free_f mm_free;
+MOCKABLE mm_alloc_f	mm_alloc;
+MOCKABLE mm_alloc_f	mm_zalloc;
+MOCKABLE mm_realloc_f	mm_realloc;
+MOCKABLE mm_free_f	mm_free;
 
 #endif
