@@ -16,6 +16,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
+#include <stdio.h>
+
 #include "unity_fixture.h"
 #include "tests/tests.h"
 #include "os/memmgr.h"
@@ -31,6 +33,22 @@ void eval_not_null_aligned_and_filled(void *ptr, int32_t size, uint8_t val, char
 			TEST_FAIL_MESSAGE(msg);
 		}
 	}
+}
+
+void eval_print_stats(void)
+{
+	uint32_t nb = mm_nb_chunk()+1;
+	mm_stats_t *stats = mm_calloc(nb, sizeof(mm_stats_t));
+	mm_chunk_info(stats, nb);
+
+	for (uint32_t i = 0; i < nb; i++) {
+		printf("%5s|%6d|%6d\n",
+			stats[i].allocated?"true":"false",
+			stats[i].size,
+			stats[i].total_size);
+	}
+
+	mm_free(stats);
 }
 
 /* Test group definitions ----------------------------------------------------*/
@@ -51,7 +69,7 @@ TEST_SETUP(memmgr)
 
 TEST_TEAR_DOWN(memmgr)
 {
-
+	mm_check();
 }
 
 /* Tests ---------------------------------------------------------------------*/
@@ -116,6 +134,9 @@ TEST(memmgr, overflow)
 	mm_free(ptr1);
 	VERIFY_DIE_END
 	die_Verify();
+
+	/* reset for tear down mm_check */
+	mm_init();
 }
 
 TEST(memmgr, realloc_expand)

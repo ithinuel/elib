@@ -45,6 +45,7 @@ typedef struct
 {
 	mm_chunk_t	*first;
 	mm_chunk_t	*last;
+	uint32_t	counter;
 } mm_heap_t;
 
 /* Prototypes ----------------------------------------------------------------*/
@@ -78,6 +79,8 @@ static int32_t			mm_wanted_size		(uint32_t size);
 
 static void *			mm_alloc_impl		(uint32_t size);
 static void *			mm_zalloc_impl		(uint32_t size);
+static void *			mm_calloc_impl		(uint32_t n,
+							 uint32_t size);
 static void *			mm_realloc_impl		(void *old_ptr,
 							 uint32_t size);
 static void 			mm_free_impl		(void *ptr);
@@ -88,6 +91,7 @@ static uint8_t		gs_raw[MM_CFG_HEAP_SIZE] __attribute__((aligned(MM_CFG_ALIGNMENT
 
 MOCKABLE mm_alloc_f	mm_alloc = mm_alloc_impl;
 MOCKABLE mm_alloc_f	mm_zalloc = mm_zalloc_impl;
+MOCKABLE mm_calloc_f	mm_calloc = mm_calloc_impl;
 MOCKABLE mm_realloc_f	mm_realloc = mm_realloc_impl;
 MOCKABLE mm_free_f	mm_free = mm_free_impl;
 
@@ -223,6 +227,8 @@ static mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 	mm_chunk_guard_set(new, 0);
 	new->xorsum = mm_chunk_xorsum(new);
 
+	gs_heap.counter++;
+
 	if (next != NULL) {
 		next->prev_size = new_size;
 		next->xorsum = mm_chunk_xorsum(next);
@@ -260,6 +266,8 @@ static void mm_chunk_merge(mm_chunk_t *this)
 	this->size = this->size + next->size;
 	mm_chunk_guard_set(this, this->guard_offset);
 	this->xorsum = mm_chunk_xorsum(this);
+
+	gs_heap.counter--;
 
 	if (next == gs_heap.last) {
 		gs_heap.last = this;
@@ -348,6 +356,11 @@ static void *mm_zalloc_impl(uint32_t size)
 	return ptr;
 }
 
+static void *mm_calloc_impl(uint32_t n, uint32_t size)
+{
+	return mm_zalloc(n * size);
+}
+
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
 	int32_t wanted_size = 0;
@@ -399,6 +412,7 @@ void mm_init(void)
 {
 	mm_chunk_t *chnk = (mm_chunk_t *)gs_raw;
 	gs_heap.last = (void *)-1;
+	gs_heap.counter = 0;
 
 	mm_chunk_t *prev = NULL;
 	uint32_t heap_size = MM_CFG_HEAP_SIZE/MM_CFG_ALIGNMENT;
@@ -418,33 +432,13 @@ void mm_init(void)
 		mm_chunk_guard_set(chnk, 0);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
+		gs_heap.counter++;
+
 		prev = chnk;
 		chnk = mm_compute_next(chnk, chnk->size);
 	}
 	gs_heap.last = prev;
 }
-/*
-void mm_print(void)
-{
-	uint32_t sum = 0;
-	static uint32_t sequence = 0;
-	printf("\n-- %d --\n", sequence);
-	sequence++;
-
-	mm_chunk_t *this = gs_heap.first;
-	mm_chunk_validate(this);
-	while (this != NULL) {
-		sum += this->size;
-		printf("%8p|%5d|%6d|%5s|%#.4x|%d\n",
-				(void *)this,
-				this->size,
-				this->guard_offset,
-				this->allocated?"true":"false",
-				this->xorsum,
-				sum);
-		this = mm_chunk_next_get(this);
-	}
-}*/
 
 void mm_check(void)
 {
@@ -455,3 +449,24 @@ void mm_check(void)
 	}
 }
 
+uint32_t mm_nb_chunk(void)
+{
+	return gs_heap.counter;
+}
+
+
+void mm_chunk_info(mm_stats_t *stats, uint32_t size)
+{
+	uint32_t cnt = 0;
+	mm_chunk_t *chnk = gs_heap.first;
+	mm_chunk_validate(chnk);
+
+	do {
+		stats[cnt].allocated = chnk->allocated;
+		stats[cnt].size = chnk->guard_offset;
+		stats[cnt].total_size = chnk->size * MM_CFG_ALIGNMENT;
+
+		cnt ++;
+		chnk = mm_chunk_next_get(chnk);
+	} while ((chnk != NULL) && (cnt < size));
+}

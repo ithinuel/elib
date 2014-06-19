@@ -19,13 +19,24 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "common/mockable.h"
 
 /* Public types --------------------------------------------------------------*/
-typedef void *		(* mm_alloc_f)			(uint32_t size);
+typedef void *		(* mm_alloc_f)			(uint32_t total_size);
+typedef void *		(* mm_calloc_f)			(uint32_t n,
+							 uint32_t total_size);
 typedef void *		(* mm_realloc_f)		(void *old_ptr,
-							 uint32_t size);
+							 uint32_t total_size);
 typedef void		(* mm_free_f)			(void *ptr);
+
+typedef struct
+{
+	uint32_t	size;
+	uint32_t	total_size;
+	bool		allocated;
+}	mm_stats_t;
 
 /* Public functions ----------------------------------------------------------*/
 /**
@@ -36,9 +47,17 @@ void			mm_init				(void);
  * Check heap integrity.
  */
 void			mm_check			(void);
+/**
+ * Gives chunk number.
+ * @return Integer.
+ */
+uint32_t		mm_nb_chunk			(void);
+void			mm_chunk_info			(mm_stats_t *stats,
+							 uint32_t size);
 
 MOCKABLE mm_alloc_f	mm_alloc;
 MOCKABLE mm_alloc_f	mm_zalloc;
+MOCKABLE mm_calloc_f	mm_calloc;
 MOCKABLE mm_realloc_f	mm_realloc;
 MOCKABLE mm_free_f	mm_free;
 
