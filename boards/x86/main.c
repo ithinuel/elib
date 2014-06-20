@@ -19,6 +19,9 @@
 
 #include "tests/tests.h"
 
+jmp_buf g_on_die;
+static char *gs_expected_cause = NULL;
+
 static void runAllTests()
 {
 	RUN_TEST_GROUP(memmgr);
@@ -26,25 +29,25 @@ static void runAllTests()
 	RUN_TEST_GROUP(object);
 }
 
-static bool gs_die_expected = false;
 void die(const char *reason)
 {
-	if (gs_die_expected) {
-		gs_die_expected = false;
+	if (gs_expected_cause != NULL) {
+		TEST_ASSERT_EQUAL_STRING(gs_expected_cause, reason);
+		gs_expected_cause= NULL;
 		longjmp(g_on_die, 1);
 	} else {
 		TEST_FAIL_MESSAGE(reason);
 	}
 }
 
-void die_Expect(void)
+void die_Expect(char *expected_cause)
 {
-	gs_die_expected = true;
+	gs_expected_cause = expected_cause;
 }
 
 void die_Verify(void)
 {
-	if (gs_die_expected) {
+	if (gs_expected_cause != NULL) {
 		TEST_FAIL_MESSAGE("This test should have died");
 	}
 }

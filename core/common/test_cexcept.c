@@ -23,13 +23,12 @@
 #include "tests/mock_memmgr.h"
 
 /* Helper functions and variables --------------------------------------------*/
-bool did_try_start = false;
-bool did_try_end = false;
-bool did_catch_start = false;
-bool did_catch_end = false;
-bool did_finally_start = false;
-bool did_finally_end = false;
-jmp_buf g_on_die;
+static bool did_try_start = false;
+static bool did_try_end = false;
+static bool did_catch_start = false;
+static bool did_catch_end = false;
+static bool did_finally_start = false;
+static bool did_finally_end = false;
 
 void do_something(bool throw)
 {
@@ -89,7 +88,7 @@ TEST_TEAR_DOWN(cexcept) {
 /* Tests ---------------------------------------------------------------------*/
 TEST(cexcept, Throw_alone)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	do_something(true);
@@ -103,7 +102,7 @@ TEST(cexcept, Try_Fail_to_alloc)
 }
 TEST(cexcept, Catch_without_ctx)
 {
-	die_Expect();
+	die_Expect("Catch without context");
 	VERIFY_DIE_START
 	switch(1)
 	{
@@ -125,7 +124,7 @@ TEST(cexcept, Finally_without_ctx)
 {
 	jmp_buf __buf;
 
-	die_Expect();
+	die_Expect("Finally without context");
 	VERIFY_DIE_START
 	switch(1)
 	{
@@ -145,7 +144,7 @@ TEST(cexcept, Finally_without_ctx)
 }
 TEST(cexcept, EndTry_without_ctx)
 {
-	die_Expect();
+	die_Expect("Exit without context");
 	VERIFY_DIE_START
 	{
 	switch(1)
@@ -172,7 +171,7 @@ TEST(cexcept, Try_EndTry)
 }
 TEST(cexcept, Try_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -250,7 +249,7 @@ TEST(cexcept, Try_Catch_Throw_EndTry)
 }
 TEST(cexcept, Try_Throw_Catch_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -360,7 +359,7 @@ TEST(cexcept, Try_Catch_Throw_Finally_EndTry)
 }
 TEST(cexcept, Try_Catch_Finally_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -391,7 +390,7 @@ TEST(cexcept, Try_Catch_Finally_Throw_EndTry)
 }
 TEST(cexcept, Try_Throw_Catch_Throw_Finally_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -423,7 +422,7 @@ TEST(cexcept, Try_Throw_Catch_Throw_Finally_EndTry)
 }
 TEST(cexcept, Try_Throw_Catch_Finally_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -455,7 +454,7 @@ TEST(cexcept, Try_Throw_Catch_Finally_Throw_EndTry)
 }
 TEST(cexcept, Try_Catch_Throw_Finally_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -488,7 +487,7 @@ TEST(cexcept, Try_Catch_Throw_Finally_Throw_EndTry)
 }
 TEST(cexcept, Try_Throw_Catch_Throw_Finally_Throw_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -541,7 +540,7 @@ TEST(cexcept, Try_Finally_EndTry)
 }
 TEST(cexcept, Try_Throw_Finally_EndTry)
 {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -564,7 +563,7 @@ TEST(cexcept, Try_Throw_Finally_EndTry)
 	die_Verify();
 }
 TEST(cexcept, Try_Finally_Throw_EndTry) {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {
@@ -587,7 +586,7 @@ TEST(cexcept, Try_Finally_Throw_EndTry) {
 	die_Verify();
 }
 TEST(cexcept, Try_Throw_Finally_Throw_EndTry) {
-	die_Expect();
+	die_Expect("Throw without context");
 
 	VERIFY_DIE_START
 	Try {

@@ -27,7 +27,7 @@
 	}
 
 /* Public functions ----------------------------------------------------------*/
-void				die_Expect			(void);
+void				die_Expect			(char *expected_cause);
 void				die_Verify			(void);
 
 /* Public variables ----------------------------------------------------------*/

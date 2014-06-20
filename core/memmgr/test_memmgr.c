@@ -41,10 +41,12 @@ TEST_GROUP(memmgr);
 TEST_GROUP_RUNNER(memmgr)
 {
 	RUN_TEST_CASE(memmgr, zalloc_free);
-	RUN_TEST_CASE(memmgr, overflow);
+	RUN_TEST_CASE(memmgr, double_free);
+	RUN_TEST_CASE(memmgr, invalid_ptr);
 	RUN_TEST_CASE(memmgr, realloc_expand);
 	RUN_TEST_CASE(memmgr, realloc_shrink);
 	RUN_TEST_CASE(memmgr, infos);
+	RUN_TEST_CASE(memmgr, infos_with_invalid_params);
 }
 
 TEST_SETUP(memmgr)
@@ -60,6 +62,7 @@ TEST_TEAR_DOWN(memmgr)
 /* Tests ---------------------------------------------------------------------*/
 TEST(memmgr, zalloc_free)
 {
+	void *ptr6 = NULL;
 	void *ptr5 = NULL;
 	void *ptr4 = NULL;
 	void *ptr3 = NULL;
@@ -79,6 +82,10 @@ TEST(memmgr, zalloc_free)
 	mm_free(ptr1);
 	mm_free(ptr2);
 
+	mm_free(NULL);
+
+	TEST_ASSERT_NULL(mm_zalloc(2*1024*1024));
+
 	ptr1 = mm_zalloc(31);
 	TEST_ASSERT_NOT_NULL(ptr1);
 	ptr2 = mm_zalloc(130877);
@@ -87,14 +94,23 @@ TEST(memmgr, zalloc_free)
 	TEST_ASSERT_NOT_NULL(ptr3);
 	ptr4 = mm_zalloc(22);
 	TEST_ASSERT_NOT_NULL(ptr4);
-	ptr5 = mm_zalloc(131048);
+	ptr5 = mm_zalloc(130984);
 	TEST_ASSERT_NOT_NULL(ptr5);
+	ptr6 = mm_zalloc(44);
+	TEST_ASSERT_NOT_NULL(ptr6);
 	TEST_ASSERT_NULL(mm_zalloc(1));
 
+	mm_free(ptr4);
 	mm_free(ptr5);
+
+	mm_free(ptr6);
+
+	ptr4 = mm_zalloc(54);
+	TEST_ASSERT_NOT_NULL(ptr4);
+	mm_free(ptr4);
+
 	mm_free(ptr2);
 	mm_free(ptr3);
-	mm_free(ptr4);
 	mm_free(ptr1);
 
 	ptr1 = mm_zalloc(32);
@@ -112,16 +128,14 @@ TEST(memmgr, zalloc_free)
 	mm_free(ptr1);
 }
 
-TEST(memmgr, overflow)
+TEST(memmgr, double_free)
 {
-	uint8_t *ptr1 = mm_zalloc(35);
-	eval_not_null_aligned_and_filled(ptr1, 35, 0, "zalloc does not fill with 0");
+	void *ptr = mm_alloc(1);
+	mm_free(ptr);
 
-	memset(ptr1, 50, 50);
-
-	die_Expect();
+	die_Expect("MM: double free");
 	VERIFY_DIE_START
-	mm_free(ptr1);
+	mm_free(ptr);
 	VERIFY_DIE_END
 	die_Verify();
 
@@ -129,9 +143,58 @@ TEST(memmgr, overflow)
 	mm_init();
 }
 
+TEST(memmgr, invalid_ptr)
+{
+	uint8_t *ptr = NULL;
+
+	die_Expect("MM: not aligned chunk");
+	VERIFY_DIE_START
+	ptr = mm_zalloc(3);
+	mm_free(ptr+1);
+	VERIFY_DIE_END
+	die_Verify();
+
+	die_Expect("MM: out of bound");
+	VERIFY_DIE_START
+	mm_free((void*)4);
+	VERIFY_DIE_END
+	die_Verify();
+
+	die_Expect("MM: out of bound");
+	VERIFY_DIE_START
+	mm_free((void*)0xFFFFFFFF0);
+	VERIFY_DIE_END
+	die_Verify();
+
+	die_Expect("MM: xorsum");
+	VERIFY_DIE_START
+	ptr = mm_zalloc(35);
+	ptr -= 5;
+	*((uint32_t*)ptr) = ~(*((uint32_t*)ptr));
+	ptr += 5;
+	mm_free(ptr);
+	VERIFY_DIE_END
+	die_Verify();
+
+	mm_init();
+
+	die_Expect("MM: Overflowed");
+	VERIFY_DIE_START
+	ptr = mm_zalloc(35);
+	eval_not_null_aligned_and_filled(ptr, 35, 0, "zalloc does not fill with 0");
+	memset(ptr, 50, 50);
+	mm_free(ptr);
+	VERIFY_DIE_END
+	die_Verify();
+
+	mm_init();
+}
+
 TEST(memmgr, realloc_expand)
 {
-	void *ptr1 = mm_zalloc(11);
+	void *ptr1 = NULL;
+
+	ptr1 = mm_realloc(ptr1, 11);
 	memset(ptr1, 'a', 11);
 	ptr1 = mm_realloc(ptr1, 50);
 	eval_not_null_aligned_and_filled(ptr1, 11, 'a', "data has been lost");
@@ -158,12 +221,16 @@ TEST(memmgr, realloc_shrink)
 	void *ptr4 = mm_zalloc(12);
 
 	mm_free(ptr1);
+
 	memset(ptr3, 'a', 1024);
 	ptr3 = mm_realloc(ptr3, 512);
+	TEST_ASSERT_NOT_NULL(ptr3);
 	memset(ptr3, 'a', 512);
 
+	ptr3 = mm_realloc(ptr3, 0);
+	TEST_ASSERT_NULL(ptr3);
+
 	mm_free(ptr2);
-	mm_free(ptr3);
 	mm_free(ptr4);
 }
 
@@ -189,4 +256,19 @@ TEST(memmgr, infos)
 	}
 	mm_free(stats);
 	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
+}
+
+TEST(memmgr, infos_with_invalid_params)
+{
+	mm_stats_t stats = {0};
+
+	mm_chunk_info(NULL, 75);
+	mm_chunk_info(&stats, 0);
+	TEST_ASSERT_FALSE(stats.allocated);
+	TEST_ASSERT_NULL(stats.allocator);
+	TEST_ASSERT_EQUAL_UINT32(0, stats.size);
+	TEST_ASSERT_EQUAL_UINT32(0, stats.total_csize);
+
+
+	mm_allocator_set(NULL);
 }

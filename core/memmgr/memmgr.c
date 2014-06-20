@@ -99,10 +99,6 @@ MOCKABLE mm_free_f	mm_free = mm_free_impl;
 /* Private Functions definitions ---------------------------------------------*/
 static mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 {
-	if (this == NULL) {
-		return NULL;
-	}
-
 	if (this == gs_heap.last) {
 		return NULL;
 	}
@@ -359,7 +355,7 @@ static void *mm_alloc_impl(uint32_t size)
 
 static void *mm_zalloc_impl(uint32_t size)
 {
-	void *ptr = mm_alloc(size);
+	void *ptr = mm_alloc_impl(size);
 	if (ptr != NULL) {
 		memset(ptr, 0, size);
 		mm_allocator_set(ptr);
@@ -369,7 +365,7 @@ static void *mm_zalloc_impl(uint32_t size)
 
 static void *mm_calloc_impl(uint32_t n, uint32_t size)
 {
-	void *ptr = mm_zalloc(n * size);
+	void *ptr = mm_zalloc_impl(n * size);
 	if (ptr != NULL) {
 		mm_allocator_set(ptr);
 	}
@@ -393,6 +389,10 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		return NULL;
 	}
 
+	if (old_ptr == NULL) {
+		return mm_alloc_impl(size);
+	}
+
 	available_on_current = mm_chunk_aggregate(chnk, true);
 
 	if (available_on_current >= wanted_size) {
@@ -404,7 +404,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		mm_chunk_split(chnk, wanted_size);
 		new_ptr = mm_toptr(chnk);
 	} else {
-		new_ptr = mm_zalloc_impl(size);
+		new_ptr = mm_alloc_impl(size);
 		if (new_ptr != NULL) {
 			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
 		}
@@ -420,10 +420,12 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 static void mm_free_impl(void *ptr)
 {
 	mm_chunk_t *chnk = mm_tochunk(ptr);
-	if (!chnk->allocated) {
-		die("MM: double free");
+	if (chnk != NULL) {
+		if (!chnk->allocated) {
+			die("MM: double free");
+		}
+		mm_chunk_delete(chnk);
 	}
-	mm_chunk_delete(chnk);
 }
 
 /* Functions definitions -----------------------------------------------------*/
@@ -478,10 +480,15 @@ uint32_t mm_nb_chunk(void)
 void mm_chunk_info(mm_stats_t *stats, uint32_t size)
 {
 	uint32_t cnt = 0;
+
+	if (stats == NULL) {
+		return;
+	}
+
 	mm_chunk_t *chnk = gs_heap.first;
 	mm_chunk_validate(chnk);
 
-	do {
+	while ((chnk != NULL) && (cnt < size)) {
 		stats[cnt].allocated = chnk->allocated;
 		stats[cnt].allocator = chnk->allocator;
 		stats[cnt].size = chnk->guard_offset;
@@ -489,13 +496,15 @@ void mm_chunk_info(mm_stats_t *stats, uint32_t size)
 
 		cnt ++;
 		chnk = mm_chunk_next_get(chnk);
-	} while ((chnk != NULL) && (cnt < size));
+	}
 }
 
 
 void mm_allocator_set(void *ptr)
 {
-	mm_chunk_t *chnk = mm_tochunk(ptr);
-	chnk->allocator = __builtin_return_address(1);
-	chnk->xorsum = mm_chunk_xorsum(chnk);
+	if (ptr != NULL) {
+		mm_chunk_t *chnk = mm_tochunk(ptr);
+		chnk->allocator = __builtin_return_address(1);
+		chnk->xorsum = mm_chunk_xorsum(chnk);
+	}
 }
