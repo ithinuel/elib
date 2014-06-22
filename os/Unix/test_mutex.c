@@ -28,22 +28,24 @@ TEST_GROUP(mutex);
 
 TEST_GROUP_RUNNER(mutex)
 {
-	RUN_TEST_CASE(mutex, create);
+	RUN_TEST_CASE(mutex, to_string);
 }
 
 TEST_SETUP(mutex)
 {
 	mock_memmgr_setup();
-	gs_mtx = mutex_new(false);
+	gs_mtx = mutex_new(false, "unit_tests");
 
 }
 
 TEST_TEAR_DOWN(mutex)
 {
 	object_delete(&gs_mtx->base);
+	gs_mtx = NULL;
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(mutex, create)
+TEST(mutex, to_string)
 {
+	TEST_ASSERT_EQUAL_STRING("unit_tests", object_to_string(&gs_mtx->base));
 }

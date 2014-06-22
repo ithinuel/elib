@@ -97,7 +97,7 @@ TEST(memmgr, zalloc_free)
 	TEST_ASSERT_NOT_NULL(ptr4);
 	ptr5 = mm_zalloc(130984);
 	TEST_ASSERT_NOT_NULL(ptr5);
-	ptr6 = mm_zalloc(12);
+	ptr6 = mm_zalloc(8);
 	TEST_ASSERT_NOT_NULL(ptr6);
 	TEST_ASSERT_NULL(mm_zalloc(1));
 

@@ -485,7 +485,7 @@ void mm_init(void)
 		chnk = mm_compute_next(chnk, chnk->size);
 	}
 	gs_heap.last = prev;
-	gs_heap.mtx = mutex_new(false);
+	gs_heap.mtx = mutex_new(false, "memmgr");
 }
 
 void mm_check(void)

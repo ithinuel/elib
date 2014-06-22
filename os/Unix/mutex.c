@@ -24,6 +24,11 @@
 #include "os/mutex.h"
 
 /* Types ---------------------------------------------------------------------*/
+typedef struct
+{
+	mutex_t base;
+	const char *name;
+} unix_mutex_t;
 
 /* Prototypes ----------------------------------------------------------------*/
 static void		mutex_obj_delete		(object_t *self);
@@ -38,22 +43,26 @@ static const object_ops_t gs_mutex_object_ops = {
 /* Functions definitions -----------------------------------------------------*/
 static void mutex_obj_delete(object_t *self)
 {
-	mutex_t *this = base_of(self, mutex_t);
+	unix_mutex_t *this = base_of(base_of(self, mutex_t), unix_mutex_t);
 	mm_free(this);
 }
 
 static char *mutex_obj_to_string(object_t *self)
 {
-	return "mutex";
+	unix_mutex_t *this = base_of(base_of(self, mutex_t), unix_mutex_t);
+	return (char *)this->name;
 }
 
-mutex_t *mutex_new(bool locked)
+mutex_t *mutex_new(bool locked, const char *name)
 {
-	mutex_t *this = mm_zalloc(sizeof(mutex_t));
+	mutex_t *base = NULL;
+	unix_mutex_t *this = mm_zalloc(sizeof(unix_mutex_t));
 	if (this != NULL) {
-		this->base.ops = &gs_mutex_object_ops;
+		this->base.base.ops = &gs_mutex_object_ops;
+		this->name = name;
+		base = &(this->base);
 	}
-	return this;
+	return base;
 }
 
 bool mutex_lock(mutex_t *self, int32_t ms)

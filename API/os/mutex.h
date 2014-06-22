@@ -31,7 +31,8 @@ typedef struct {
 /* Public macros -------------------------------------------------------------*/
 /* Public variables ----------------------------------------------------------*/
 /* Public prototypes ---------------------------------------------------------*/
-mutex_t *		mutex_new			(bool took);
+mutex_t *		mutex_new			(bool locked,
+							 const char *name);
 bool			mutex_lock			(mutex_t *this,
 							 int32_t ms);
 void			mutex_unlock			(mutex_t *this);
