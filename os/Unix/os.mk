@@ -16,6 +16,8 @@ OS_DIR = os/Unix
 
 OS_SRCS = \
 	$(OS_DIR)/task.c \
+	$(OS_DIR)/mutex.c \
+	$(OS_DIR)/test_mutex.c
 	
 OS_CFLAGS +=  
 

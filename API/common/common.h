@@ -20,6 +20,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 
+/* Macros --------------------------------------------------------------------*/
+#define		base_of(ptr, type) \
+	(type *)((uintptr_t)ptr - __builtin_offsetof(type, base))
+
 /* Public functions ----------------------------------------------------------*/
 /**
  * Returns the lower from a or b.

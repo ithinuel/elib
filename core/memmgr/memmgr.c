@@ -21,6 +21,7 @@
 
 #include "common/common.h"
 #include "os/memmgr.h"
+#include "os/mutex.h"
 
 #include "memmgr_conf.h"
 
@@ -46,6 +47,7 @@ typedef struct
 {
 	mm_chunk_t	*first;
 	mm_chunk_t	*last;
+	mutex_t		*mtx;
 	uint32_t	counter;
 } mm_heap_t;
 
@@ -77,6 +79,8 @@ static mm_chunk_t *		mm_find_first_free	(uint16_t wanted_size);
 static void			mm_chunk_validate	(mm_chunk_t *this);
 
 static int32_t			mm_wanted_size		(uint32_t size);
+static void			mm_lock			(void);
+static void			mm_unlock		(void);
 
 static void *			mm_alloc_impl		(uint32_t size);
 static void *			mm_zalloc_impl		(uint32_t size);
@@ -324,6 +328,16 @@ static int32_t mm_wanted_size(uint32_t size)
 	return wanted_size;
 }
 
+static void mm_lock(void)
+{
+	mutex_lock(gs_heap.mtx, -1);
+}
+
+static void mm_unlock(void)
+{
+	mutex_unlock(gs_heap.mtx);
+}
+
 static void *mm_alloc_impl(uint32_t size)
 {
 	int32_t wanted_size = 0;
@@ -338,6 +352,7 @@ static void *mm_alloc_impl(uint32_t size)
 		return NULL;
 	}
 
+	mm_lock();
 	chnk = mm_find_first_free(wanted_size);
 	if (chnk != NULL) {
 		if (chnk->size > (wanted_size + mm_min_csize())) {
@@ -350,25 +365,30 @@ static void *mm_alloc_impl(uint32_t size)
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 		ptr = mm_toptr(chnk);
 	}
+	mm_unlock();
 	return ptr;
 }
 
 static void *mm_zalloc_impl(uint32_t size)
 {
+	mm_lock();
 	void *ptr = mm_alloc_impl(size);
 	if (ptr != NULL) {
 		memset(ptr, 0, size);
 		mm_allocator_set(ptr);
 	}
+	mm_unlock();
 	return ptr;
 }
 
 static void *mm_calloc_impl(uint32_t n, uint32_t size)
 {
+	mm_lock();
 	void *ptr = mm_zalloc_impl(n * size);
 	if (ptr != NULL) {
 		mm_allocator_set(ptr);
 	}
+	mm_unlock();
 	return ptr;
 }
 
@@ -376,7 +396,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
 	int32_t wanted_size = 0;
 	uint32_t available_on_current = 0;
-	mm_chunk_t *chnk = mm_tochunk(old_ptr);
+	mm_chunk_t *chnk = NULL;
 	void *new_ptr = NULL;
 
 	if (size == 0) {
@@ -393,6 +413,8 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		return mm_alloc_impl(size);
 	}
 
+	mm_lock();
+	chnk = mm_tochunk(old_ptr);
 	available_on_current = mm_chunk_aggregate(chnk, true);
 
 	if (available_on_current >= wanted_size) {
@@ -414,11 +436,13 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 
 	chnk->allocator = __builtin_return_address(1);
 	chnk->xorsum = mm_chunk_xorsum(chnk);
+	mm_unlock();
 	return new_ptr;
 }
 
 static void mm_free_impl(void *ptr)
 {
+	mm_lock();
 	mm_chunk_t *chnk = mm_tochunk(ptr);
 	if (chnk != NULL) {
 		if (!chnk->allocated) {
@@ -426,6 +450,7 @@ static void mm_free_impl(void *ptr)
 		}
 		mm_chunk_delete(chnk);
 	}
+	mm_unlock();
 }
 
 /* Functions definitions -----------------------------------------------------*/
@@ -460,15 +485,18 @@ void mm_init(void)
 		chnk = mm_compute_next(chnk, chnk->size);
 	}
 	gs_heap.last = prev;
+	gs_heap.mtx = mutex_new(false);
 }
 
 void mm_check(void)
 {
+	mm_lock();
 	mm_chunk_t *chnk = gs_heap.first;
 	mm_chunk_validate(chnk);
 	while (chnk != NULL) {
 		chnk = mm_chunk_next_get(chnk);
 	}
+	mm_unlock();
 }
 
 uint32_t mm_nb_chunk(void)
@@ -485,6 +513,7 @@ void mm_chunk_info(mm_stats_t *stats, uint32_t size)
 		return;
 	}
 
+	mm_lock();
 	mm_chunk_t *chnk = gs_heap.first;
 	mm_chunk_validate(chnk);
 
@@ -497,14 +526,17 @@ void mm_chunk_info(mm_stats_t *stats, uint32_t size)
 		cnt ++;
 		chnk = mm_chunk_next_get(chnk);
 	}
+	mm_unlock();
 }
 
 
 void mm_allocator_set(void *ptr)
 {
+	mm_lock();
 	if (ptr != NULL) {
 		mm_chunk_t *chnk = mm_tochunk(ptr);
 		chnk->allocator = __builtin_return_address(1);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 	}
+	mm_unlock();
 }

@@ -14,18 +14,36 @@
 	limitations under the License.
 */
 
-#ifndef __OS_TASK_H__
-#define __OS_TASK_H__
-
-/* Public forward declarations -----------------------------------------------*/
 /* Includes ------------------------------------------------------------------*/
-#include "common/cexcept.h"
+#include "unity_fixture.h"
+#include "tests/mock_memmgr.h"
+#include "os/memmgr.h"
+#include "os/mutex.h"
 
-/* Public types --------------------------------------------------------------*/
-/* Public macros -------------------------------------------------------------*/
-/* Public variables ----------------------------------------------------------*/
-/* Public prototypes ---------------------------------------------------------*/
-cexcept_ctx_t *		task_cexcept_get_ctx		(void);
-void			task_cexcept_set_ctx		(cexcept_ctx_t *);
+/*----------------------------------------------------------------------------*/
+static mutex_t *gs_mtx = NULL;
 
-#endif
+/* Test group definitions ----------------------------------------------------*/
+TEST_GROUP(mutex);
+
+TEST_GROUP_RUNNER(mutex)
+{
+	RUN_TEST_CASE(mutex, create);
+}
+
+TEST_SETUP(mutex)
+{
+	mock_memmgr_setup();
+	gs_mtx = mutex_new(false);
+
+}
+
+TEST_TEAR_DOWN(mutex)
+{
+	object_delete(&gs_mtx->base);
+}
+
+/* Tests ---------------------------------------------------------------------*/
+TEST(mutex, create)
+{
+}

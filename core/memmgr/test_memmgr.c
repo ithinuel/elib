@@ -17,6 +17,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "unity_fixture.h"
 #include "tests/tests.h"
@@ -96,7 +97,7 @@ TEST(memmgr, zalloc_free)
 	TEST_ASSERT_NOT_NULL(ptr4);
 	ptr5 = mm_zalloc(130984);
 	TEST_ASSERT_NOT_NULL(ptr5);
-	ptr6 = mm_zalloc(44);
+	ptr6 = mm_zalloc(12);
 	TEST_ASSERT_NOT_NULL(ptr6);
 	TEST_ASSERT_NULL(mm_zalloc(1));
 
@@ -236,26 +237,30 @@ TEST(memmgr, realloc_shrink)
 
 TEST(memmgr, infos)
 {
-	uint32_t base = MM_CFG_HEAP_SIZE/(UINT15_MAX*MM_CFG_ALIGNMENT);
+	/* base count is total/maxblocksize plus mutex */
+	uint32_t base = MM_CFG_HEAP_SIZE/(UINT15_MAX*MM_CFG_ALIGNMENT) + 1;
 	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
 
-	mm_stats_t *stats = mm_calloc(3, sizeof(mm_stats_t));
+	/* we will allocate stat table */
+	base += 1;
+
+	mm_stats_t *stats = mm_calloc(base, sizeof(mm_stats_t));
 	mm_allocator_set(stats);
 	TEST_ASSERT_NOT_NULL(stats);
-	TEST_ASSERT_EQUAL_INT(base+1, mm_nb_chunk());
+	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
 
-	mm_chunk_info(stats, base+1);
-	for (int32_t i = 0; i < (base+1); i++) {
-		if (i == 0) {
+	mm_chunk_info(stats, base);
+	for (int32_t i = 0; i < base; i++) {
+		if (i < 2) {
 			TEST_ASSERT_TRUE(stats[i].allocated);
-			TEST_ASSERT_EQUAL_UINT32(sizeof(mm_stats_t)*(base+1), stats[i].size);
+			TEST_ASSERT_NOT_EQUAL(0, stats[i].size);
 		} else {
 			TEST_ASSERT_FALSE(stats[i].allocated);
 			TEST_ASSERT_EQUAL_UINT32(0, stats[i].size);
 		}
 	}
 	mm_free(stats);
-	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
+	TEST_ASSERT_EQUAL_INT(base-1, mm_nb_chunk());
 }
 
 TEST(memmgr, infos_with_invalid_params)

@@ -14,8 +14,8 @@
 	limitations under the License.
 */
 
-#ifndef __MOCK_MEMMGR_H__
-#define __MOCK_MEMMGR_H__
+#ifndef __TESTS_MOCK_MEMMGR_H__
+#define __TESTS_MOCK_MEMMGR_H__
 void mock_memmgr_setup(void);
 
 #endif

@@ -14,6 +14,7 @@
 	limitations under the License.
 */
 
+#include <stdlib.h>
 #include <stdbool.h>
 #include "unity_fixture.h"
 
@@ -27,6 +28,7 @@ static void runAllTests()
 	RUN_TEST_GROUP(memmgr);
 	RUN_TEST_GROUP(cexcept);
 	RUN_TEST_GROUP(object);
+	RUN_TEST_GROUP(mutex);
 }
 
 void die(const char *reason)
@@ -37,6 +39,8 @@ void die(const char *reason)
 		longjmp(g_on_die, 1);
 	} else {
 		TEST_FAIL_MESSAGE(reason);
+		/* test fail may return on  teardown */
+		exit(1);
 	}
 }
 

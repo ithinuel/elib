@@ -34,13 +34,11 @@ static void *mm_zalloc_mock(uint32_t size)
 	return ptr;
 }
 
-static void mm_free_mock(void *ptr)
-{
-	free(ptr);
-}
-
 void mock_memmgr_setup(void)
 {
+	UT_PTR_SET(mm_alloc, unity_malloc);
 	UT_PTR_SET(mm_zalloc, mm_zalloc_mock);
-	UT_PTR_SET(mm_free, mm_free_mock);
+	UT_PTR_SET(mm_calloc, unity_calloc);
+	UT_PTR_SET(mm_realloc, unity_realloc);
+	UT_PTR_SET(mm_free, unity_free);
 }

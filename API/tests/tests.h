@@ -14,8 +14,8 @@
 	limitations under the License.
 */
 
-#ifndef __COMMON_TESTS_H__
-#define __COMMON_TESTS_H__
+#ifndef __TESTS_TESTS_H__
+#define __TESTS_TESTS_H__
 
 /* Includes ------------------------------------------------------------------*/
 #include <setjmp.h>

@@ -14,18 +14,27 @@
 	limitations under the License.
 */
 
-#ifndef __OS_TASK_H__
-#define __OS_TASK_H__
+#ifndef __OS_MUTEX_H__
+#define __OS_MUTEX_H__
 
 /* Public forward declarations -----------------------------------------------*/
 /* Includes ------------------------------------------------------------------*/
-#include "common/cexcept.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include "common/object.h"
 
 /* Public types --------------------------------------------------------------*/
+typedef struct {
+	object_t base;
+} mutex_t;
+
 /* Public macros -------------------------------------------------------------*/
 /* Public variables ----------------------------------------------------------*/
 /* Public prototypes ---------------------------------------------------------*/
-cexcept_ctx_t *		task_cexcept_get_ctx		(void);
-void			task_cexcept_set_ctx		(cexcept_ctx_t *);
+mutex_t *		mutex_new			(bool took);
+bool			mutex_lock			(mutex_t *this,
+							 int32_t ms);
+void			mutex_unlock			(mutex_t *this);
+
 
 #endif
