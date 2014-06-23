@@ -222,14 +222,19 @@ TEST(memmgr, realloc_shrink)
 	void *ptr4 = mm_zalloc(12);
 
 	mm_free(ptr1);
-
 	memset(ptr3, 'a', 1024);
+
+	ptr3 = mm_realloc(ptr3, 1024);
+	eval_not_null_aligned_and_filled(ptr3, 1024, 'a', "data has been lost");
+
 	ptr3 = mm_realloc(ptr3, 512);
-	TEST_ASSERT_NOT_NULL(ptr3);
+	eval_not_null_aligned_and_filled(ptr3, 512, 'a', "data has been lost");
 	memset(ptr3, 'a', 512);
+
 
 	ptr3 = mm_realloc(ptr3, 0);
 	TEST_ASSERT_NULL(ptr3);
+
 
 	mm_free(ptr2);
 	mm_free(ptr4);

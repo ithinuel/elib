@@ -60,7 +60,7 @@ static mm_chunk_t *		mm_chunk_next_get	(mm_chunk_t *this);
 static bool			mm_chunk_guard_get	(mm_chunk_t *this);
 static void			mm_chunk_guard_set	(mm_chunk_t *this,
 							 uint32_t offset);
-static mm_chunk_t *		mm_chunk_split		(mm_chunk_t *this,
+static void			mm_chunk_split		(mm_chunk_t *this,
 							 uint16_t csize);
 static void			mm_chunk_merge		(mm_chunk_t *this);
 static uint16_t			mm_chunk_xorsum		(mm_chunk_t *this);
@@ -213,11 +213,15 @@ static uint16_t mm_min_csize(void)
 	return mm_header_csize() + MM_CFG_MIN_PAYLOAD + MM_CFG_GUARD_SIZE;
 }
 
-static mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
+static void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 {
 	mm_chunk_t *next = mm_chunk_next_get(this);
 
 	uint32_t new_size = this->size - csize;
+	if (new_size < mm_min_csize()) {
+		return;
+	}
+
 	this->size = csize;
 	this->xorsum = mm_chunk_xorsum(this);
 	mm_chunk_t *new = mm_compute_next(this, csize);
@@ -243,8 +247,6 @@ static mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 	if (gs_heap.last == this) {
 		gs_heap.last = new;
 	}
-
-	return new;
 }
 
 static uint16_t mm_chunk_xorsum(mm_chunk_t *this)
@@ -355,9 +357,7 @@ static void *mm_alloc_impl(uint32_t size)
 	mm_lock();
 	chnk = mm_find_first_free(wanted_size);
 	if (chnk != NULL) {
-		if (chnk->size > (wanted_size + mm_min_csize())) {
-			mm_chunk_split(chnk, wanted_size);
-		}
+		mm_chunk_split(chnk, wanted_size);
 
 		chnk->allocated = true;
 		mm_chunk_guard_set(chnk, size);
