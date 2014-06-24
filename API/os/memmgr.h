@@ -24,8 +24,6 @@
 #include "common/mockable.h"
 
 /* macros --------------------------------------------------------------------*/
-#define UINT15_MAX		(32767)
-
 /* Public types --------------------------------------------------------------*/
 typedef void *		(* mm_alloc_f)			(uint32_t total_csize);
 typedef void *		(* mm_calloc_f)			(uint32_t n,

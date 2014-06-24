@@ -24,25 +24,13 @@
 #include "os/mutex.h"
 
 #include "memmgr_conf.h"
+#if 0
 
 /* Macro definitions ---------------------------------------------------------*/
 #define MM_TO_CSIZE(size)	((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT)
 #define MM_GUARD_PAD		(48)
 
 /* Type definitions ----------------------------------------------------------*/
-typedef struct
-{
-	/* previous chunk size. used to find previous chunk in chain */
-	uint16_t	prev_size:15;
-	bool		allocated:1;
-	uint16_t	xorsum;
-
-	uint16_t	size:15;
-	uint32_t	guard_offset:17;
-
-	void *		allocator;
-} mm_chunk_t;
-
 typedef struct
 {
 	mm_chunk_t	*first;
@@ -321,7 +309,7 @@ static uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 
 static int32_t mm_wanted_size(uint32_t size)
 {
-	int32_t wanted_size = (size + (MM_CFG_ALIGNMENT-1)) / MM_CFG_ALIGNMENT;
+	int32_t wanted_size = mm_to_csize(size);
 	wanted_size += mm_header_csize() + MM_CFG_GUARD_SIZE;
 
 	if (wanted_size > UINT15_MAX) {
@@ -329,6 +317,7 @@ static int32_t mm_wanted_size(uint32_t size)
 	}
 	return wanted_size;
 }
+
 
 static void mm_lock(void)
 {
@@ -544,3 +533,4 @@ void mm_allocator_set(void *ptr)
 	}
 	mm_unlock();
 }
+#endif
