@@ -67,10 +67,15 @@ mutex_t *mutex_new(bool locked, const char *name)
 
 bool mutex_lock(mutex_t *self, int32_t ms)
 {
+	if (self == NULL) {
+		die("null mutex");
+	}
 	return true;
 }
 
-void mutex_unlock(mutex_t *this)
+void mutex_unlock(mutex_t *self)
 {
-
+	if (self == NULL) {
+		die("null mutex");
+	}
 }

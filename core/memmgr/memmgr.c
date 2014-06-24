@@ -332,12 +332,16 @@ static int32_t mm_wanted_size(uint32_t size)
 
 static void mm_lock(void)
 {
-	mutex_lock(gs_heap.mtx, -1);
+	if (gs_heap.mtx != NULL) {
+		mutex_lock(gs_heap.mtx, -1);
+	}
 }
 
 static void mm_unlock(void)
 {
-	mutex_unlock(gs_heap.mtx);
+	if (gs_heap.mtx != NULL) {
+		mutex_unlock(gs_heap.mtx);
+	}
 }
 
 static void *mm_alloc_impl(uint32_t size)
