@@ -25,4 +25,5 @@
 
 # third_party folder.
 /third_party/*
+!/third_party/*.mk
 /build_*
