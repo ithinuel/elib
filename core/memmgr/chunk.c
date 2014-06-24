@@ -32,6 +32,20 @@
 /* Variables -----------------------------------------------------------------*/
 
 /* Private Functions definitions ---------------------------------------------*/
+void mm_chunk_init(mm_chunk_t *this, mm_chunk_t *prev, uint16_t csize)
+{
+	this->size = csize;
+	this->allocated = false;
+	this->allocator = NULL;
+	mm_chunk_guard_set(this, 0);
+	if (prev != NULL) {
+		this->prev_size = prev->size;
+	} else {
+		this->prev_size = 0;
+	}
+	this->xorsum = mm_chunk_xorsum(this);
+}
+
 mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 {
 	mm_chunk_t *next = mm_compute_next(this, this->size);
@@ -99,17 +113,17 @@ void mm_chunk_validate(mm_chunk_t *this)
 	// chunk must :
 	// is aligned
 	if (((uintptr_t)this % MM_CFG_ALIGNMENT) != 0) {
-		die("MM: not aligned chunk");
-	}
-	
-	// have not overflowed
-	if (!mm_chunk_guard_get(this)) {
-		die("MM: Overflowed");
+		die("MM: alignment");
 	}
 
 	// have a valid header chksum
 	if (mm_chunk_xorsum(this) != this->xorsum) {
 		die("MM: xorsum");
+	}
+	
+	// have not overflowed
+	if (!mm_chunk_guard_get(this)) {
+		die("MM: overflowed");
 	}
 }
 

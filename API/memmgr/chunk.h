@@ -40,6 +40,9 @@ typedef struct
 
 
 /* Functions prototypes ------------------------------------------------------*/
+void			mm_chunk_init		(mm_chunk_t *this,
+						 mm_chunk_t *prev,
+						 uint16_t csize);
 mm_chunk_t *		mm_compute_next		(mm_chunk_t *this,
 						 uint16_t csize);
 mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
