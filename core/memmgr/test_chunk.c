@@ -20,8 +20,10 @@
 #include <stdlib.h>
 
 #include "unity_fixture.h"
-#include "tests/tests.h"
+#include "common/common.h"
 #include "memmgr/chunk.h"
+#include "tests/tests.h"
+
 #include "memmgr_conf.h"
 
 /* helpers -------------------------------------------------------------------*/
@@ -46,41 +48,74 @@ static void eval_validate_xorsum(void)
 
 
 /* Test group definitions ----------------------------------------------------*/
-TEST_GROUP(mm_chunk);
-
-TEST_GROUP_RUNNER(mm_chunk)
+TEST_GROUP(subgroup_chunk_validate);
+TEST_GROUP_RUNNER(subgroup_chunk_validate)
 {
-	RUN_TEST_CASE(mm_chunk, validate);
-	RUN_TEST_CASE(mm_chunk, validate_alignment);
-	RUN_TEST_CASE(mm_chunk, validate_overflow);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_prev_size);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_allocated);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_xorsum);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_size);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_guard_offset);
-	RUN_TEST_CASE(mm_chunk, validate_corruption_allocator);
-	RUN_TEST_CASE(mm_chunk, split);
-	RUN_TEST_CASE(mm_chunk, merge);
-	RUN_TEST_CASE(mm_chunk, aggregate);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_alignment);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_overflow);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_prev_size);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_allocated);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_xorsum);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_size);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_guard_offset);
+	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_allocator);
 }
-
-TEST_SETUP(mm_chunk)
+TEST_SETUP(subgroup_chunk_validate)
 {
 	mm_chunk_init(gs_chnk, NULL, 1024/MM_CFG_ALIGNMENT);
 }
-
-TEST_TEAR_DOWN(mm_chunk)
+TEST_TEAR_DOWN(subgroup_chunk_validate)
 {
 	memset(gs_raw, 0, 1024);
 }
 
+TEST_GROUP(subgroup_chunk_merge);
+TEST_GROUP_RUNNER(subgroup_chunk_merge)
+{
+	RUN_TEST_CASE(subgroup_chunk_merge, merge);
+}
+TEST_SETUP(subgroup_chunk_merge)
+{
+	mm_chunk_t *prev = NULL;
+	mm_chunk_t *chnk = gs_chnk;
+	uint32_t total = 1024/MM_CFG_ALIGNMENT;
+		
+	while (total > mm_min_csize()) {
+		mm_chunk_init(chnk, prev, umin(total, 64));
+		
+		total -= chnk->size;
+		prev = chnk;
+		chnk = mm_compute_next(chnk, chnk->size);
+	}
+}
+TEST_TEAR_DOWN(subgroup_chunk_merge)
+{
+	memset(gs_raw, 0, 1024);
+}
+
+TEST_GROUP(mm_chunk);
+TEST_GROUP_RUNNER(mm_chunk)
+{
+	RUN_TEST_GROUP(subgroup_chunk_validate);
+	RUN_TEST_GROUP(subgroup_chunk_merge);
+	RUN_TEST_CASE(mm_chunk, split);
+	RUN_TEST_CASE(mm_chunk, aggregate);
+}
+TEST_SETUP(mm_chunk)
+{
+}
+TEST_TEAR_DOWN(mm_chunk)
+{
+}
+
 /* Tests ---------------------------------------------------------------------*/
-TEST(mm_chunk, validate)
+TEST(subgroup_chunk_validate, validate)
 {
 	mm_chunk_validate(gs_chnk);
 }
 
-TEST(mm_chunk, validate_alignment)
+TEST(subgroup_chunk_validate, validate_alignment)
 {
 	die_Expect("MM: alignment");
 	VERIFY_DIE_START
@@ -89,7 +124,7 @@ TEST(mm_chunk, validate_alignment)
 	die_Verify();
 }
 
-TEST(mm_chunk, validate_overflow)
+TEST(subgroup_chunk_validate, validate_overflow)
 {
 	die_Expect("MM: overflowed");
 	VERIFY_DIE_START
@@ -101,48 +136,50 @@ TEST(mm_chunk, validate_overflow)
 	die_Verify();
 }
 
-TEST(mm_chunk, validate_corruption_prev_size)
+TEST(subgroup_chunk_validate, validate_corruption_prev_size)
 {
 	gs_chnk->prev_size = 32;
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, validate_corruption_allocated)
+TEST(subgroup_chunk_validate, validate_corruption_allocated)
 {
 	gs_chnk->allocated = true;
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, validate_corruption_xorsum)
+TEST(subgroup_chunk_validate, validate_corruption_xorsum)
 {
 	gs_chnk->xorsum = 0;
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, validate_corruption_size)
+TEST(subgroup_chunk_validate, validate_corruption_size)
 {
 	gs_chnk->size = 0;
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, validate_corruption_guard_offset)
+TEST(subgroup_chunk_validate, validate_corruption_guard_offset)
 {
 	gs_chnk->guard_offset = 42;
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, validate_corruption_allocator)
+TEST(subgroup_chunk_validate, validate_corruption_allocator)
 {
 	gs_chnk->allocator = __builtin_return_address(0);
 	eval_validate_xorsum();
 }
 
-TEST(mm_chunk, split)
+/* -------------------------------------------------------------------------- */
+TEST(subgroup_chunk_merge, merge)
 {
-	TEST_FAIL();
+	mm_chunk_merge(gs_chnk);
 }
 
-TEST(mm_chunk, merge)
+/* -------------------------------------------------------------------------- */
+TEST(mm_chunk, split)
 {
 	TEST_FAIL();
 }
