@@ -48,6 +48,7 @@ TEST_GROUP_RUNNER(memmgr)
 	RUN_TEST_CASE(memmgr, realloc_shrink);
 	RUN_TEST_CASE(memmgr, infos);
 	RUN_TEST_CASE(memmgr, infos_with_invalid_params);*/
+	RUN_TEST_CASE(memmgr, rien);
 }
 
 TEST_SETUP(memmgr)
@@ -61,6 +62,9 @@ TEST_TEAR_DOWN(memmgr)
 }
 
 /* Tests ---------------------------------------------------------------------*/
+IGNORE_TEST(memmgr, rien)
+{
+}
 #if 0
 TEST(memmgr, zalloc_free)
 {
