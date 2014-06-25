@@ -22,6 +22,7 @@ CORE_SRCS = \
 	$(CORE_DIR)/memmgr/test_memmgr.c \
 	$(CORE_DIR)/memmgr/chunk.c \
 	$(CORE_DIR)/memmgr/test_chunk.c \
+	$(CORE_DIR)/memmgr/test_chunk_validate.c \
 	$(CORE_DIR)/common/cexcept.c \
 	$(CORE_DIR)/common/test_cexcept.c
 	

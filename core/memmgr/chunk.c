@@ -138,6 +138,9 @@ void mm_chunk_merge(mm_chunk_t *this)
 	if (next == NULL) {
 		return;
 	}
+	if (next->allocated) {
+		return;
+	}
 	
 	mm_chunk_t *next_next = mm_chunk_next_get(next);
 	this->size = this->size + next->size;
@@ -151,6 +154,38 @@ void mm_chunk_merge(mm_chunk_t *this)
 	if (next_next != NULL) {
 		next_next->prev_size = this->size;
 		next_next->xorsum = mm_chunk_xorsum(next_next);
+	}
+}
+
+void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
+{
+	mm_chunk_t *next = mm_chunk_next_get(this);
+	
+	uint32_t new_size = this->size - csize;
+	if (new_size < mm_min_csize()) {
+		return;
+	}
+
+	this->size = csize;
+	this->xorsum = mm_chunk_xorsum(this);
+	mm_chunk_t *new = mm_compute_next(this, csize);
+
+	new->prev_size = this->size;
+	new->size = new_size;
+	new->allocated = false;
+	new->allocator = 0;
+	mm_chunk_guard_set(new, 0);
+	new->xorsum = mm_chunk_xorsum(new);
+	
+	if (next != NULL) {
+		next->prev_size = new_size;
+		next->xorsum = mm_chunk_xorsum(next);
+		if (!next->allocated &&
+		    ((new_size + (uint32_t)next->size) <= UINT15_MAX)) {
+			mm_chunk_merge(new);
+		}
+	} else {
+		gs_chunk_boundary.last = new;
 	}
 }
 
@@ -207,36 +242,6 @@ void mm_chunk_delete(mm_chunk_t *this)
 	mm_chunk_aggregate(this, false);
 }
 
-
-void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
-{
-	mm_chunk_t *next = mm_chunk_next_get(this);
-
-	uint32_t new_size = this->size - csize;
-	if (new_size < mm_min_csize()) {
-		return;
-	}
-
-	this->size = csize;
-	this->xorsum = mm_chunk_xorsum(this);
-	mm_chunk_t *new = mm_compute_next(this, csize);
-
-	new->prev_size = this->size;
-	new->size = new_size;
-	new->allocated = false;
-	new->allocator = 0;
-	mm_chunk_guard_set(new, 0);
-	new->xorsum = mm_chunk_xorsum(new);
-
-	if (next != NULL) {
-		next->prev_size = new_size;
-		next->xorsum = mm_chunk_xorsum(next);
-		if (!next->allocated &&
-		    ((new_size + (uint32_t)next->size) <= UINT15_MAX)) {
-			mm_chunk_merge(new);
-		}
-	}
-}
 
 uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 {

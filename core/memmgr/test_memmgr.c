@@ -62,9 +62,11 @@ TEST_TEAR_DOWN(memmgr)
 }
 
 /* Tests ---------------------------------------------------------------------*/
-IGNORE_TEST(memmgr, rien)
+TEST(memmgr, rien)
 {
+	TEST_FAIL();
 }
+
 #if 0
 TEST(memmgr, zalloc_free)
 {

@@ -55,6 +55,8 @@ void			mm_chunk_guard_set	(mm_chunk_t *this,
 uint16_t		mm_chunk_xorsum		(mm_chunk_t *this);
 void			mm_chunk_validate	(mm_chunk_t *this);
 void			mm_chunk_merge		(mm_chunk_t *this);
+void			mm_chunk_split		(mm_chunk_t *this,
+						 uint16_t csize);
 
 void *			mm_toptr		(mm_chunk_t *this);
 
@@ -63,8 +65,6 @@ uint16_t		mm_min_csize		(void);
 uint16_t		mm_header_csize		(void);
 
 #if 0
-void			mm_chunk_split		(mm_chunk_t *this,
-						 uint16_t csize);
 void			mm_chunk_delete		(mm_chunk_t *this);
 
 mm_chunk_t *		mm_tochunk		(void *ptr);

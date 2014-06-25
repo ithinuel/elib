@@ -28,29 +28,37 @@
 
 /* helpers -------------------------------------------------------------------*/
 /* functions' prototypes */
-static void		 eval_validate_xorsum			(void);
+static void		prepare_chunk				(uint16_t *csize_array,
+								 uint32_t array_len);
+static void		eval_chunk_status			(uint16_t *csize_array,
+								 uint32_t array_len);
 
 /* variables */
 static uint8_t gs_raw[1024];
 static mm_chunk_t *gs_chnk = (mm_chunk_t *)gs_raw;
 
 /* functions' definitions */
-static void eval_validate_xorsum(void)
+static void prepare_chunk(uint16_t *csize_array, uint32_t array_len)
 {
-	die_Expect("MM: xorsum");
-	VERIFY_DIE_START
-	
-	mm_chunk_validate(gs_chnk);
-	
-	VERIFY_DIE_END
-	die_Verify();
+	mm_chunk_t *prev =  NULL;
+	mm_chunk_t *chnk = gs_chnk;
+	for (uint32_t i = 0; i < array_len; i++)
+	{
+		uint16_t csize = csize_array[i];
+		mm_chunk_init(chnk, prev, csize);
+		prev = chnk;
+		chnk = mm_compute_next(chnk, csize);
+	}
+	mm_chunk_boundary_set(prev);
 }
 
-static void eval_chunk_status(uint32_t *csize_array, uint32_t array_len)
+static void eval_chunk_status(uint16_t *csize_array, uint32_t array_len)
 {
+	//printf("\n");
 	mm_chunk_t *chnk = gs_chnk;
 	for (uint32_t i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
+		//printf("%p %5d %d\n", chnk, chnk->size, chnk->allocated);
 		TEST_ASSERT_EQUAL_UINT16(csize_array[i], chnk->size);
 	}
 	if (chnk != NULL) {
@@ -60,59 +68,15 @@ static void eval_chunk_status(uint32_t *csize_array, uint32_t array_len)
 
 
 /* Test group definitions ----------------------------------------------------*/
-TEST_GROUP(subgroup_chunk_validate);
-TEST_GROUP_RUNNER(subgroup_chunk_validate)
-{
-	RUN_TEST_CASE(subgroup_chunk_validate, validate);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_alignment);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_overflow);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_prev_size);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_allocated);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_xorsum);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_size);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_guard_offset);
-	RUN_TEST_CASE(subgroup_chunk_validate, validate_corruption_allocator);
-}
-TEST_SETUP(subgroup_chunk_validate)
-{
-	mm_chunk_init(gs_chnk, NULL, 1024/MM_CFG_ALIGNMENT);
-	mm_chunk_boundary_set(gs_chnk);
-}
-TEST_TEAR_DOWN(subgroup_chunk_validate)
-{
-	memset(gs_raw, 0, 1024);
-}
-
-TEST_GROUP(subgroup_chunk_merge);
-TEST_GROUP_RUNNER(subgroup_chunk_merge)
-{
-	RUN_TEST_CASE(subgroup_chunk_merge, merge);
-}
-TEST_SETUP(subgroup_chunk_merge)
-{
-	mm_chunk_t *prev = NULL;
-	mm_chunk_t *chnk = gs_chnk;
-	uint32_t total = 1024/MM_CFG_ALIGNMENT;
-	
-	while (total > mm_min_csize()) {
-		mm_chunk_init(chnk, prev, umin(total, 64));
-		
-		total -= chnk->size;
-		prev = chnk;
-		chnk = mm_compute_next(chnk, chnk->size);
-	}
-	mm_chunk_boundary_set(prev);
-}
-TEST_TEAR_DOWN(subgroup_chunk_merge)
-{
-	memset(gs_raw, 0, 1024);
-}
-
 TEST_GROUP(mm_chunk);
 TEST_GROUP_RUNNER(mm_chunk)
 {
-	RUN_TEST_GROUP(subgroup_chunk_validate);
-	RUN_TEST_GROUP(subgroup_chunk_merge);
+	RUN_TEST_GROUP(mm_chunk_validate);
+	
+	RUN_TEST_CASE(mm_chunk, merge_the_first_one);
+	RUN_TEST_CASE(mm_chunk, merge_in_the_middle);
+	RUN_TEST_CASE(mm_chunk, merge_the_last_one);
+	RUN_TEST_CASE(mm_chunk, merge_dont_absorb_next_if_allocated);
 	RUN_TEST_CASE(mm_chunk, split);
 	RUN_TEST_CASE(mm_chunk, aggregate);
 }
@@ -121,91 +85,80 @@ TEST_SETUP(mm_chunk)
 }
 TEST_TEAR_DOWN(mm_chunk)
 {
+	memset(gs_raw, 0, 1024);
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(subgroup_chunk_validate, validate)
+TEST(mm_chunk, merge_the_first_one)
 {
-	mm_chunk_validate(gs_chnk);
-}
-
-TEST(subgroup_chunk_validate, validate_alignment)
-{
-	die_Expect("MM: alignment");
-	VERIFY_DIE_START
-	mm_chunk_validate((mm_chunk_t *)((uintptr_t)gs_chnk + 1));
-	VERIFY_DIE_END
-	die_Verify();
-}
-
-TEST(subgroup_chunk_validate, validate_overflow)
-{
-	die_Expect("MM: overflowed");
-	VERIFY_DIE_START
-
-	memset(gs_raw + 512, 0, 512);
-	mm_chunk_validate(gs_chnk);
-
-	VERIFY_DIE_END
-	die_Verify();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_prev_size)
-{
-	gs_chnk->prev_size = 32;
-	eval_validate_xorsum();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_allocated)
-{
-	gs_chnk->allocated = true;
-	eval_validate_xorsum();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_xorsum)
-{
-	gs_chnk->xorsum = 0;
-	eval_validate_xorsum();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_size)
-{
-	gs_chnk->size = 0;
-	eval_validate_xorsum();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_guard_offset)
-{
-	gs_chnk->guard_offset = 42;
-	eval_validate_xorsum();
-}
-
-TEST(subgroup_chunk_validate, validate_corruption_allocator)
-{
-	gs_chnk->allocator = __builtin_return_address(0);
-	eval_validate_xorsum();
-}
-
-/* -------------------------------------------------------------------------- */
-TEST(subgroup_chunk_merge, merge)
-{
-	uint32_t a_csize1[] = {128, 64, 64};
-	uint32_t a_csize2[] = {128, 128};
+	uint16_t a_csize[4] = {64, 64, 64, 64};
+	prepare_chunk(a_csize, 4);
+	
+	uint16_t a_csize_expected[] = {128, 64, 64};
 	mm_chunk_merge(gs_chnk);
-	eval_chunk_status(a_csize1, 3);
-	
-	mm_chunk_t *chnk2 = mm_chunk_next_get(gs_chnk);
-	mm_chunk_merge(chnk2);
-	eval_chunk_status(a_csize2, 2);
-	
-	mm_chunk_merge(chnk2);
-	eval_chunk_status(a_csize2, 2);
+	eval_chunk_status(a_csize_expected, 3);
 }
 
-/* -------------------------------------------------------------------------- */
+TEST(mm_chunk, merge_in_the_middle)
+{
+	uint16_t a_csize[4] = {64, 64, 64, 64};
+	prepare_chunk(a_csize, 4);
+	
+	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
+	
+	uint16_t a_csize_expected[] = {64, 128, 64};
+	mm_chunk_merge(second);
+	eval_chunk_status(a_csize_expected, 3);
+	
+	a_csize_expected[1] = 192;
+	mm_chunk_merge(second);
+	eval_chunk_status(a_csize_expected, 2);
+}
+
+TEST(mm_chunk, merge_the_last_one)
+{
+	uint16_t a_csize[4] = {64, 64, 64, 64};
+	prepare_chunk(a_csize, 4);
+
+	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
+	mm_chunk_t *third = mm_chunk_next_get(second);
+	mm_chunk_t *forth = mm_chunk_next_get(third);
+	
+	uint16_t a_csize_expected[] = {64, 64, 64, 64};
+	mm_chunk_merge(forth);
+	eval_chunk_status(a_csize_expected, 4);
+}
+
+TEST(mm_chunk, merge_dont_absorb_next_if_allocated)
+{
+	uint16_t a_csize_expected[] = {64, 64, 64, 64};
+	uint16_t a_csize_expected_2[] = {64, 128, 64};
+	uint16_t a_csize[4] = {64, 64, 64, 64};
+	prepare_chunk(a_csize, 4);
+	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
+	second->allocated = true;
+	second->xorsum = mm_chunk_xorsum(second);
+	
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_csize_expected, 4);
+	
+	mm_chunk_merge(second);
+	eval_chunk_status(a_csize_expected_2, 3);
+}
+
 TEST(mm_chunk, split)
 {
-	TEST_FAIL();
+	uint16_t a_csize[1] = {256};
+	prepare_chunk(a_csize, 1);
+		
+	uint16_t expect_a_csize_1[2] = {128, 128};
+	uint16_t expect_a_csize_2[2] = {64, 192};
+	
+	mm_chunk_split(gs_chnk, 128);
+	eval_chunk_status(expect_a_csize_1, 2);
+	
+	mm_chunk_split(gs_chnk, 64);
+	eval_chunk_status(expect_a_csize_2, 2);
 }
 
 TEST(mm_chunk, aggregate)
