@@ -46,6 +46,18 @@ static void eval_validate_xorsum(void)
 	die_Verify();
 }
 
+static void eval_chunk_status(uint32_t *csize_array, uint32_t array_len)
+{
+	mm_chunk_t *chnk = gs_chnk;
+	for (uint32_t i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
+	{
+		TEST_ASSERT_EQUAL_UINT16(csize_array[i], chnk->size);
+	}
+	if (chnk != NULL) {
+		TEST_FAIL_MESSAGE("more chunk than expected");
+	}
+}
+
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(subgroup_chunk_validate);
@@ -64,6 +76,7 @@ TEST_GROUP_RUNNER(subgroup_chunk_validate)
 TEST_SETUP(subgroup_chunk_validate)
 {
 	mm_chunk_init(gs_chnk, NULL, 1024/MM_CFG_ALIGNMENT);
+	mm_chunk_boundary_set(gs_chnk);
 }
 TEST_TEAR_DOWN(subgroup_chunk_validate)
 {
@@ -80,7 +93,7 @@ TEST_SETUP(subgroup_chunk_merge)
 	mm_chunk_t *prev = NULL;
 	mm_chunk_t *chnk = gs_chnk;
 	uint32_t total = 1024/MM_CFG_ALIGNMENT;
-		
+	
 	while (total > mm_min_csize()) {
 		mm_chunk_init(chnk, prev, umin(total, 64));
 		
@@ -88,6 +101,7 @@ TEST_SETUP(subgroup_chunk_merge)
 		prev = chnk;
 		chnk = mm_compute_next(chnk, chnk->size);
 	}
+	mm_chunk_boundary_set(prev);
 }
 TEST_TEAR_DOWN(subgroup_chunk_merge)
 {
@@ -175,7 +189,17 @@ TEST(subgroup_chunk_validate, validate_corruption_allocator)
 /* -------------------------------------------------------------------------- */
 TEST(subgroup_chunk_merge, merge)
 {
+	uint32_t a_csize1[] = {128, 64, 64};
+	uint32_t a_csize2[] = {128, 128};
 	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_csize1, 3);
+	
+	mm_chunk_t *chnk2 = mm_chunk_next_get(gs_chnk);
+	mm_chunk_merge(chnk2);
+	eval_chunk_status(a_csize2, 2);
+	
+	mm_chunk_merge(chnk2);
+	eval_chunk_status(a_csize2, 2);
 }
 
 /* -------------------------------------------------------------------------- */

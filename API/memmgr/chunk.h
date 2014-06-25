@@ -40,33 +40,38 @@ typedef struct
 
 
 /* Functions prototypes ------------------------------------------------------*/
+void			mm_chunk_boundary_set	(mm_chunk_t *last);
 void			mm_chunk_init		(mm_chunk_t *this,
 						 mm_chunk_t *prev,
 						 uint16_t csize);
 mm_chunk_t *		mm_compute_next		(mm_chunk_t *this,
 						 uint16_t csize);
-mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
+//mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
 mm_chunk_t *		mm_chunk_next_get	(mm_chunk_t *this);
 
 bool			mm_chunk_guard_get	(mm_chunk_t *this);
 void			mm_chunk_guard_set	(mm_chunk_t *this,
 						 uint32_t offset);
-void			mm_chunk_split		(mm_chunk_t *this,
-						 uint16_t csize);
-void			mm_chunk_merge		(mm_chunk_t *this);
 uint16_t		mm_chunk_xorsum		(mm_chunk_t *this);
-void			mm_chunk_delete		(mm_chunk_t *this);
+void			mm_chunk_validate	(mm_chunk_t *this);
+void			mm_chunk_merge		(mm_chunk_t *this);
 
 void *			mm_toptr		(mm_chunk_t *this);
+
+uint16_t 		mm_to_csize		(uint32_t size);
+uint16_t		mm_min_csize		(void);
+uint16_t		mm_header_csize		(void);
+
+#if 0
+void			mm_chunk_split		(mm_chunk_t *this,
+						 uint16_t csize);
+void			mm_chunk_delete		(mm_chunk_t *this);
+
 mm_chunk_t *		mm_tochunk		(void *ptr);
 
-uint16_t		mm_header_csize		(void);
-uint16_t		mm_min_csize		(void);
 
 uint32_t		mm_chunk_aggregate	(mm_chunk_t *this,
 						 bool dry_run);
-void			mm_chunk_validate	(mm_chunk_t *this);
 
-uint16_t 		mm_to_csize		(uint32_t size);
-
+#endif
 #endif

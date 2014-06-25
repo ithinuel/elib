@@ -28,10 +28,31 @@
 #define MM_GUARD_PAD		(48)
 
 /* Type definitions ----------------------------------------------------------*/
+typedef struct
+{
+	mm_chunk_t	*last;
+} mm_boundary_t;
+
 /* Prototypes ----------------------------------------------------------------*/
+static uint32_t			mm_guard_size		(mm_chunk_t *this);
+
 /* Variables -----------------------------------------------------------------*/
+static mm_boundary_t gs_chunk_boundary = {NULL};
+
+
 
 /* Private Functions definitions ---------------------------------------------*/
+static uint32_t mm_guard_size(mm_chunk_t *this)
+{
+	return ((uint32_t)(this->size - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
+}
+
+/* Functions' definitions ----------------------------------------------------*/
+void mm_chunk_boundary_set(mm_chunk_t *last)
+{
+	gs_chunk_boundary.last = last;
+}
+
 void mm_chunk_init(mm_chunk_t *this, mm_chunk_t *prev, uint16_t csize)
 {
 	this->size = csize;
@@ -46,25 +67,19 @@ void mm_chunk_init(mm_chunk_t *this, mm_chunk_t *prev, uint16_t csize)
 	this->xorsum = mm_chunk_xorsum(this);
 }
 
+mm_chunk_t *mm_compute_next(mm_chunk_t *this, uint16_t csize)
+{
+	return (mm_chunk_t *)(((uintptr_t)this) + (csize * MM_CFG_ALIGNMENT));
+}
+
 mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 {
+	if (this == gs_chunk_boundary.last) {
+		return NULL;
+	}
 	mm_chunk_t *next = mm_compute_next(this, this->size);
 	mm_chunk_validate(next);
 	return next;
-}
-
-mm_chunk_t *mm_chunk_prev_get(mm_chunk_t *this)
-{
-	if (this->prev_size == 0) {
-		return NULL;
-	} else {
-		return (mm_chunk_t *)((uintptr_t)this - this->prev_size*MM_CFG_ALIGNMENT);
-	}
-}
-
-uint32_t mm_guard_size(mm_chunk_t *this)
-{
-	return ((uint32_t)(this->size - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
 }
 
 bool mm_chunk_guard_get(mm_chunk_t *this)
@@ -87,25 +102,15 @@ void mm_chunk_guard_set(mm_chunk_t *this, uint32_t offset)
 	memset(ptr, MM_GUARD_PAD, size);
 }
 
-void *mm_toptr(mm_chunk_t *this)
+uint16_t mm_chunk_xorsum(mm_chunk_t *this)
 {
-	void *ptr = this;
-	return ptr + (sizeof(mm_chunk_t));
-}
-
-mm_chunk_t *mm_tochunk(void *ptr)
-{
-	if (ptr == NULL) {
-		return NULL;
-	}
-	mm_chunk_t *chunk = ptr - (mm_header_csize()*MM_CFG_ALIGNMENT);
-	mm_chunk_validate(chunk);
-	return chunk;
-}
-
-mm_chunk_t *mm_compute_next(mm_chunk_t *this, uint16_t csize)
-{
-	return (mm_chunk_t *)(((uintptr_t)this) + (csize * MM_CFG_ALIGNMENT));
+	return	this->allocated ^
+		this->guard_offset ^
+		this->prev_size ^
+		this->size ^
+		(((uintptr_t)this) & 0xFFFF) ^
+		(((uintptr_t)this->allocator >> 16) & 0xFFFF) ^
+		((uintptr_t)this->allocator & 0xFFFF);
 }
 
 void mm_chunk_validate(mm_chunk_t *this)
@@ -127,9 +132,37 @@ void mm_chunk_validate(mm_chunk_t *this)
 	}
 }
 
-uint16_t mm_header_csize(void)
+void mm_chunk_merge(mm_chunk_t *this)
 {
-	return mm_to_csize(sizeof(mm_chunk_t));
+	mm_chunk_t *next = mm_chunk_next_get(this);
+	if (next == NULL) {
+		return;
+	}
+	
+	mm_chunk_t *next_next = mm_chunk_next_get(next);
+	this->size = this->size + next->size;
+	mm_chunk_guard_set(this, this->guard_offset);
+	this->xorsum = mm_chunk_xorsum(this);
+
+	if (gs_chunk_boundary.last == next) {
+		gs_chunk_boundary.last = this;
+	}
+
+	if (next_next != NULL) {
+		next_next->prev_size = this->size;
+		next_next->xorsum = mm_chunk_xorsum(next_next);
+	}
+}
+
+void *mm_toptr(mm_chunk_t *this)
+{
+	void *ptr = this;
+	return ptr + (sizeof(mm_chunk_t));
+}
+
+uint16_t mm_to_csize(uint32_t size)
+{
+	return ((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT);
 }
 
 uint16_t mm_min_csize(void)
@@ -137,16 +170,31 @@ uint16_t mm_min_csize(void)
 	return mm_header_csize() + MM_CFG_MIN_PAYLOAD + MM_CFG_GUARD_SIZE;
 }
 
-
-uint16_t mm_chunk_xorsum(mm_chunk_t *this)
+uint16_t mm_header_csize(void)
 {
-	return	this->allocated ^
-		this->guard_offset ^
-		this->prev_size ^
-		this->size ^
-		(((uintptr_t)this) & 0xFFFF) ^
-		(((uintptr_t)this->allocator >> 16) & 0xFFFF) ^
-		((uintptr_t)this->allocator & 0xFFFF);
+	return mm_to_csize(sizeof(mm_chunk_t));
+}
+
+#if 0
+
+mm_chunk_t *mm_tochunk(void *ptr)
+{
+	if (ptr == NULL) {
+		return NULL;
+	}
+	mm_chunk_t *chunk = ptr - (mm_header_csize()*MM_CFG_ALIGNMENT);
+	mm_chunk_validate(chunk);
+	return chunk;
+}
+
+
+mm_chunk_t *mm_chunk_prev_get(mm_chunk_t *this)
+{
+	if (this->prev_size == 0) {
+		return NULL;
+	} else {
+		return (mm_chunk_t *)((uintptr_t)this - this->prev_size*MM_CFG_ALIGNMENT);
+	}
 }
 
 void mm_chunk_delete(mm_chunk_t *this)
@@ -158,6 +206,7 @@ void mm_chunk_delete(mm_chunk_t *this)
 
 	mm_chunk_aggregate(this, false);
 }
+
 
 void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 {
@@ -186,20 +235,6 @@ void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 		    ((new_size + (uint32_t)next->size) <= UINT15_MAX)) {
 			mm_chunk_merge(new);
 		}
-	}
-}
-
-void mm_chunk_merge(mm_chunk_t *this)
-{
-	mm_chunk_t *next = mm_chunk_next_get(this);
-	mm_chunk_t *next_next = mm_chunk_next_get(next);
-	this->size = this->size + next->size;
-	mm_chunk_guard_set(this, this->guard_offset);
-	this->xorsum = mm_chunk_xorsum(this);
-
-	if (next_next != NULL) {
-		next_next->prev_size = this->size;
-		next_next->xorsum = mm_chunk_xorsum(next_next);
 	}
 }
 
@@ -232,8 +267,4 @@ uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 	return available_on_current;
 }
 
-uint16_t mm_to_csize(uint32_t size)
-{
-	return ((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT);
-}
-
+#endif
