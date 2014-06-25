@@ -34,19 +34,12 @@ typedef struct
 } mm_boundary_t;
 
 /* Prototypes ----------------------------------------------------------------*/
-static uint32_t			mm_guard_size		(mm_chunk_t *this);
-
 /* Variables -----------------------------------------------------------------*/
 static mm_boundary_t gs_chunk_boundary = {NULL};
 
 
 
 /* Private Functions definitions ---------------------------------------------*/
-static uint32_t mm_guard_size(mm_chunk_t *this)
-{
-	return ((uint32_t)(this->size - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
-}
-
 /* Functions' definitions ----------------------------------------------------*/
 void mm_chunk_boundary_set(mm_chunk_t *last)
 {
@@ -80,6 +73,11 @@ mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 	mm_chunk_t *next = mm_compute_next(this, this->size);
 	mm_chunk_validate(next);
 	return next;
+}
+
+uint32_t mm_guard_size(mm_chunk_t *this)
+{
+	return ((uint32_t)(this->size - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
 }
 
 bool mm_chunk_guard_get(mm_chunk_t *this)
@@ -138,13 +136,23 @@ void mm_chunk_merge(mm_chunk_t *this)
 	if (next == NULL) {
 		return;
 	}
-	if (next->allocated) {
-		return;
+	if (this->allocated && next->allocated) {
+		die("MM: cant merge");
 	}
 	
+	uint32_t guard_offset = this->guard_offset;
 	mm_chunk_t *next_next = mm_chunk_next_get(next);
 	this->size = this->size + next->size;
-	mm_chunk_guard_set(this, this->guard_offset);
+	
+	if (next->allocated) {
+		this->allocated = true;
+		guard_offset = next->guard_offset;
+		void *src = mm_toptr(next);
+		void *dst = mm_toptr(this);
+		memmove(dst, src, guard_offset);
+	}
+	
+	mm_chunk_guard_set(this, guard_offset);
 	this->xorsum = mm_chunk_xorsum(this);
 
 	if (gs_chunk_boundary.last == next) {

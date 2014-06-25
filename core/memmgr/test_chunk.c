@@ -27,45 +27,93 @@
 #include "memmgr_conf.h"
 
 /* helpers -------------------------------------------------------------------*/
+typedef struct
+{
+	uint16_t size;
+	bool	 allocated;
+} test_chunk_state_t;
+
 /* functions' prototypes */
-static void		prepare_chunk				(uint16_t *csize_array,
+static void		prepare_chunk				(test_chunk_state_t *array,
 								 uint32_t array_len);
-static void		eval_chunk_status			(uint16_t *csize_array,
+static char *		bool_to_string				(bool val);
+static void		eval_chunk_status			(test_chunk_state_t *array,
 								 uint32_t array_len);
+static void		chunk_allocated_set			(mm_chunk_t *this,
+								 bool val);
+static uint32_t		chunk_fill_with				(mm_chunk_t *this,
+								 char val);
+static void		eval_fill_with				(mm_chunk_t *this,
+								 char val,
+								 uint32_t payload_size);
 
 /* variables */
 static uint8_t gs_raw[1024];
 static mm_chunk_t *gs_chnk = (mm_chunk_t *)gs_raw;
 
 /* functions' definitions */
-static void prepare_chunk(uint16_t *csize_array, uint32_t array_len)
+static void prepare_chunk(test_chunk_state_t *array, uint32_t array_len)
 {
 	mm_chunk_t *prev =  NULL;
 	mm_chunk_t *chnk = gs_chnk;
 	for (uint32_t i = 0; i < array_len; i++)
 	{
-		uint16_t csize = csize_array[i];
+		uint16_t csize = array[i].size;
 		mm_chunk_init(chnk, prev, csize);
+		chunk_allocated_set(chnk, array[i].allocated);
+		
 		prev = chnk;
 		chnk = mm_compute_next(chnk, csize);
 	}
 	mm_chunk_boundary_set(prev);
 }
 
-static void eval_chunk_status(uint16_t *csize_array, uint32_t array_len)
+static char *bool_to_string(bool val)
+{
+	return val?"true":"false";
+}
+
+static void eval_chunk_status(test_chunk_state_t *array, uint32_t array_len)
 {
 	//printf("\n");
 	mm_chunk_t *chnk = gs_chnk;
-	for (uint32_t i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
+	uint32_t i = 0;
+	for (i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
-		//printf("%p %5d %d\n", chnk, chnk->size, chnk->allocated);
-		TEST_ASSERT_EQUAL_UINT16(csize_array[i], chnk->size);
+		//printf("%p %5d %5s %5d\n", chnk, chnk->size, bool_to_string(chnk->allocated), chnk->guard_offset);
+		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->size);
+		TEST_ASSERT_EQUAL_STRING(bool_to_string(array[i].allocated), bool_to_string(chnk->allocated));
 	}
-	if (chnk != NULL) {
-		TEST_FAIL_MESSAGE("more chunk than expected");
-	}
+	TEST_ASSERT_NULL_MESSAGE(chnk, "more chunk than expected");
+	TEST_ASSERT_EQUAL_UINT32_MESSAGE(array_len, i, "less chunk than expected");
 }
 
+static void chunk_allocated_set(mm_chunk_t *this, bool val)
+{
+	this->allocated = val;
+	this->xorsum = mm_chunk_xorsum(this);
+}
+
+static uint32_t chunk_fill_with(mm_chunk_t *this, char val)
+{
+	uint32_t payload_size = mm_guard_size(this) - (MM_CFG_GUARD_SIZE*MM_CFG_ALIGNMENT); 
+	
+	mm_chunk_guard_set(this, payload_size);
+	this->xorsum = mm_chunk_xorsum(this);
+	
+	char *ptr = mm_toptr(this);
+	memset(ptr, val, payload_size);
+	
+	return payload_size;
+}
+
+static void eval_fill_with(mm_chunk_t *this, char val, uint32_t payload_size)
+{
+	uint8_t *ptr = mm_toptr(this);
+	for (uint32_t i = 0; i < payload_size; i++) {
+		TEST_ASSERT_EQUAL_UINT8_MESSAGE(val, ptr[i], "Data has beed lost");
+	}
+}
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(mm_chunk);
@@ -73,10 +121,25 @@ TEST_GROUP_RUNNER(mm_chunk)
 {
 	RUN_TEST_GROUP(mm_chunk_validate);
 	
-	RUN_TEST_CASE(mm_chunk, merge_the_first_one);
-	RUN_TEST_CASE(mm_chunk, merge_in_the_middle);
-	RUN_TEST_CASE(mm_chunk, merge_the_last_one);
-	RUN_TEST_CASE(mm_chunk, merge_dont_absorb_next_if_allocated);
+	/*
+	 * n : not allocated
+	 * . : null
+	 * a : allocated
+	 *
+	 * this + next =>
+	 * a + . = a
+	 * n + . = n
+	 * n + n = n
+	 * n + a = a (data moved from a)
+	 * a + n = a
+	 * a + a = !!die!!
+	 */
+	RUN_TEST_CASE(mm_chunk, merge_alloc_null);
+	RUN_TEST_CASE(mm_chunk, merge_not_alloc_null);
+	RUN_TEST_CASE(mm_chunk, merge_both_not_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_not_alloc_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_alloc_not_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_alloc_alloc);
 	RUN_TEST_CASE(mm_chunk, split);
 	RUN_TEST_CASE(mm_chunk, aggregate);
 }
@@ -89,76 +152,84 @@ TEST_TEAR_DOWN(mm_chunk)
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(mm_chunk, merge_the_first_one)
+TEST(mm_chunk, merge_alloc_null)
 {
-	uint16_t a_csize[4] = {64, 64, 64, 64};
-	prepare_chunk(a_csize, 4);
-	
-	uint16_t a_csize_expected[] = {128, 64, 64};
-	mm_chunk_merge(gs_chnk);
-	eval_chunk_status(a_csize_expected, 3);
-}
-
-TEST(mm_chunk, merge_in_the_middle)
-{
-	uint16_t a_csize[4] = {64, 64, 64, 64};
-	prepare_chunk(a_csize, 4);
-	
-	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
-	
-	uint16_t a_csize_expected[] = {64, 128, 64};
-	mm_chunk_merge(second);
-	eval_chunk_status(a_csize_expected, 3);
-	
-	a_csize_expected[1] = 192;
-	mm_chunk_merge(second);
-	eval_chunk_status(a_csize_expected, 2);
-}
-
-TEST(mm_chunk, merge_the_last_one)
-{
-	uint16_t a_csize[4] = {64, 64, 64, 64};
-	prepare_chunk(a_csize, 4);
-
-	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
-	mm_chunk_t *third = mm_chunk_next_get(second);
-	mm_chunk_t *forth = mm_chunk_next_get(third);
-	
-	uint16_t a_csize_expected[] = {64, 64, 64, 64};
-	mm_chunk_merge(forth);
-	eval_chunk_status(a_csize_expected, 4);
-}
-
-TEST(mm_chunk, merge_dont_absorb_next_if_allocated)
-{
-	uint16_t a_csize_expected[] = {64, 64, 64, 64};
-	uint16_t a_csize_expected_2[] = {64, 128, 64};
-	uint16_t a_csize[4] = {64, 64, 64, 64};
-	prepare_chunk(a_csize, 4);
-	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
-	second->allocated = true;
-	second->xorsum = mm_chunk_xorsum(second);
+	test_chunk_state_t a_state[] = {{256, true}};
+	prepare_chunk(a_state, 1);
 	
 	mm_chunk_merge(gs_chnk);
-	eval_chunk_status(a_csize_expected, 4);
+	eval_chunk_status(a_state, 1);
+}
+
+TEST(mm_chunk, merge_not_alloc_null)
+{
+	test_chunk_state_t a_state[] = {{256, false}};
+	prepare_chunk(a_state, 1);
 	
-	mm_chunk_merge(second);
-	eval_chunk_status(a_csize_expected_2, 3);
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_state, 1);
+}
+
+TEST(mm_chunk, merge_both_not_alloc)
+{
+	test_chunk_state_t a_state[] = {{128, false}, {128, false}};
+	prepare_chunk(a_state, 2);
+	
+	test_chunk_state_t a_expect[] = {{256, false}};
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_expect, 1);
+}
+
+TEST(mm_chunk, merge_not_alloc_alloc)
+{
+	test_chunk_state_t a_state[] = {{32, false}, {128, true}, {96, false}};
+	test_chunk_state_t a_expect[] = {{160, true}, {96, false}};
+	prepare_chunk(a_state, 3);
+	
+	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
+	uint32_t payload_size = chunk_fill_with(second, 'A');
+	
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_expect, 2);
+	eval_fill_with(gs_chnk, 'A', payload_size);
+}
+
+TEST(mm_chunk, merge_alloc_not_alloc)
+{
+	test_chunk_state_t a_state[] = {{32, true}, {128, false}, {96, false}};
+	test_chunk_state_t a_expect[] = {{160, true}, {96, false}};
+	prepare_chunk(a_state, 3);
+	
+	uint32_t payload_size = chunk_fill_with(gs_chnk, 'A');
+	
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_expect, 2);
+	eval_fill_with(gs_chnk, 'A', payload_size);
+}
+
+TEST(mm_chunk, merge_alloc_alloc)
+{
+	test_chunk_state_t a_state[] = {{32, true}, {128, true}, {96, false}};
+	prepare_chunk(a_state, 3);
+	
+	uint32_t payload_a = chunk_fill_with(gs_chnk, 'A');
+	mm_chunk_t *second = mm_chunk_next_get(gs_chnk);
+	uint32_t payload_b = chunk_fill_with(second, 'B');
+	
+	die_Expect("MM: cant merge");
+	VERIFY_DIE_START
+	mm_chunk_merge(gs_chnk);
+	VERIFY_DIE_END
+	die_Verify();
+	
+	eval_chunk_status(a_state, 3);
+	eval_fill_with(gs_chnk, 'A', payload_a);
+	eval_fill_with(second, 'B', payload_b);
 }
 
 TEST(mm_chunk, split)
 {
-	uint16_t a_csize[1] = {256};
-	prepare_chunk(a_csize, 1);
-		
-	uint16_t expect_a_csize_1[2] = {128, 128};
-	uint16_t expect_a_csize_2[2] = {64, 192};
-	
-	mm_chunk_split(gs_chnk, 128);
-	eval_chunk_status(expect_a_csize_1, 2);
-	
-	mm_chunk_split(gs_chnk, 64);
-	eval_chunk_status(expect_a_csize_2, 2);
+	TEST_FAIL();
 }
 
 TEST(mm_chunk, aggregate)

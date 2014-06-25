@@ -49,6 +49,7 @@ mm_chunk_t *		mm_compute_next		(mm_chunk_t *this,
 //mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
 mm_chunk_t *		mm_chunk_next_get	(mm_chunk_t *this);
 
+uint32_t		mm_guard_size		(mm_chunk_t *this);
 bool			mm_chunk_guard_get	(mm_chunk_t *this);
 void			mm_chunk_guard_set	(mm_chunk_t *this,
 						 uint32_t offset);
