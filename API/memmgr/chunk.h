@@ -22,7 +22,6 @@
 
 /* Macro definitions ---------------------------------------------------------*/
 #define UINT15_MAX		(32767)
-#define MM_GUARD_PAD		(48)
 
 /* Types ---------------------------------------------------------------------*/
 typedef struct
@@ -32,7 +31,7 @@ typedef struct
 	bool		allocated:1;
 	uint16_t	xorsum;
 
-	uint16_t	size:15;
+	uint16_t	csize:15;
 	uint32_t	guard_offset:17;
 
 	void *		allocator;

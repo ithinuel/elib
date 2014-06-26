@@ -116,7 +116,7 @@ TEST(mm_chunk_validate, validate_corruption_xorsum)
 
 TEST(mm_chunk_validate, validate_corruption_size)
 {
-	gs_chnk->size = 0;
+	gs_chnk->csize = 0;
 	eval_validate_xorsum();
 }
 

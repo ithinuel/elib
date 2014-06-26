@@ -25,7 +25,7 @@
 #include "memmgr_conf.h"
 
 /* Macro definitions ---------------------------------------------------------*/
-#define MM_GUARD_PAD		(48)
+#define MM_GUARD_PAD		(0x3E)
 
 /* Type definitions ----------------------------------------------------------*/
 typedef struct
@@ -48,12 +48,12 @@ void mm_chunk_boundary_set(mm_chunk_t *last)
 
 void mm_chunk_init(mm_chunk_t *this, mm_chunk_t *prev, uint16_t csize)
 {
-	this->size = csize;
+	this->csize = csize;
 	this->allocated = false;
 	this->allocator = NULL;
 	mm_chunk_guard_set(this, 0);
 	if (prev != NULL) {
-		this->prev_size = prev->size;
+		this->prev_size = prev->csize;
 	} else {
 		this->prev_size = 0;
 	}
@@ -70,14 +70,14 @@ mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 	if (this == gs_chunk_boundary.last) {
 		return NULL;
 	}
-	mm_chunk_t *next = mm_compute_next(this, this->size);
+	mm_chunk_t *next = mm_compute_next(this, this->csize);
 	mm_chunk_validate(next);
 	return next;
 }
 
 uint32_t mm_guard_size(mm_chunk_t *this)
 {
-	return ((uint32_t)(this->size - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
+	return ((uint32_t)(this->csize - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
 }
 
 bool mm_chunk_guard_get(mm_chunk_t *this)
@@ -96,7 +96,7 @@ void mm_chunk_guard_set(mm_chunk_t *this, uint32_t offset)
 {
 	this->guard_offset = offset;
 	uint8_t *ptr = mm_toptr(this) + offset;
-	uint32_t size = ((this->size-mm_header_csize()) * MM_CFG_ALIGNMENT)-offset;
+	uint32_t size = ((this->csize-mm_header_csize()) * MM_CFG_ALIGNMENT)-offset;
 	memset(ptr, MM_GUARD_PAD, size);
 }
 
@@ -105,7 +105,7 @@ uint16_t mm_chunk_xorsum(mm_chunk_t *this)
 	return	this->allocated ^
 		this->guard_offset ^
 		this->prev_size ^
-		this->size ^
+		this->csize ^
 		(((uintptr_t)this) & 0xFFFF) ^
 		(((uintptr_t)this->allocator >> 16) & 0xFFFF) ^
 		((uintptr_t)this->allocator & 0xFFFF);
@@ -141,8 +141,11 @@ void mm_chunk_merge(mm_chunk_t *this)
 	}
 	
 	uint32_t guard_offset = this->guard_offset;
-	mm_chunk_t *next_next = mm_chunk_next_get(next);
-	this->size = this->size + next->size;
+	uint32_t size = this->csize + next->csize;
+	if (size > UINT15_MAX) {
+		return;
+	}
+	this->csize = size;
 	
 	if (next->allocated) {
 		this->allocated = true;
@@ -157,11 +160,10 @@ void mm_chunk_merge(mm_chunk_t *this)
 
 	if (gs_chunk_boundary.last == next) {
 		gs_chunk_boundary.last = this;
-	}
-
-	if (next_next != NULL) {
-		next_next->prev_size = this->size;
-		next_next->xorsum = mm_chunk_xorsum(next_next);
+	} else {
+		next = mm_chunk_next_get(this);
+		next->prev_size = this->csize;
+		next->xorsum = mm_chunk_xorsum(next);
 	}
 }
 
@@ -169,29 +171,20 @@ void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 {
 	mm_chunk_t *next = mm_chunk_next_get(this);
 	
-	uint32_t new_size = this->size - csize;
+	uint32_t new_size = this->csize - csize;
 	if (new_size < mm_min_csize()) {
 		return;
 	}
 
-	this->size = csize;
+	this->csize = csize;
 	this->xorsum = mm_chunk_xorsum(this);
 	mm_chunk_t *new = mm_compute_next(this, csize);
 
-	new->prev_size = this->size;
-	new->size = new_size;
-	new->allocated = false;
-	new->allocator = 0;
-	mm_chunk_guard_set(new, 0);
-	new->xorsum = mm_chunk_xorsum(new);
+	mm_chunk_init(new, this, new_size);
 	
 	if (next != NULL) {
 		next->prev_size = new_size;
 		next->xorsum = mm_chunk_xorsum(next);
-		if (!next->allocated &&
-		    ((new_size + (uint32_t)next->size) <= UINT15_MAX)) {
-			mm_chunk_merge(new);
-		}
 	} else {
 		gs_chunk_boundary.last = new;
 	}
@@ -255,11 +248,11 @@ uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 {
 	mm_chunk_t *prev = mm_chunk_prev_get(this);
 	mm_chunk_t *next = mm_chunk_next_get(this);
-	uint32_t available_on_current = this->size;
+	uint32_t available_on_current = this->csize;
 	uint32_t tmp = 0;
 
 	if ((next != NULL) && !(next->allocated)) {
-		tmp = available_on_current + next->size;
+		tmp = available_on_current + next->csize;
 		if (tmp <= UINT15_MAX) {
 			available_on_current = tmp;
 			if (!dry_run) {
@@ -268,7 +261,7 @@ uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
 		}
 	}
 	if ((prev != NULL) && !(prev->allocated)) {
-		tmp = available_on_current + prev->size;
+		tmp = available_on_current + prev->csize;
 		if (tmp <= UINT15_MAX) {
 			available_on_current = tmp;
 			if (!dry_run) {

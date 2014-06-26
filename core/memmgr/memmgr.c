@@ -24,6 +24,11 @@
 #include "os/mutex.h"
 
 #include "memmgr_conf.h"
+MOCKABLE mm_alloc_f	mm_alloc = NULL;
+MOCKABLE mm_alloc_f	mm_zalloc = NULL;
+MOCKABLE mm_calloc_f	mm_calloc = NULL;
+MOCKABLE mm_realloc_f	mm_realloc = NULL;
+MOCKABLE mm_free_f	mm_free = NULL;
 #if 0
 
 /* Macro definitions ---------------------------------------------------------*/

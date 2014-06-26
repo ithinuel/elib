@@ -22,7 +22,9 @@
 #include "unity_fixture.h"
 #include "common/common.h"
 #include "memmgr/chunk.h"
+#include "os/memmgr.h"
 #include "tests/tests.h"
+#include "tests/mock_memmgr.h"
 
 #include "memmgr_conf.h"
 
@@ -59,6 +61,7 @@ static void prepare_chunk(test_chunk_state_t *array, uint32_t array_len)
 	for (uint32_t i = 0; i < array_len; i++)
 	{
 		uint16_t csize = array[i].size;
+
 		mm_chunk_init(chnk, prev, csize);
 		chunk_allocated_set(chnk, array[i].allocated);
 		
@@ -81,7 +84,7 @@ static void eval_chunk_status(test_chunk_state_t *array, uint32_t array_len)
 	for (i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
 		//printf("%p %5d %5s %5d\n", chnk, chnk->size, bool_to_string(chnk->allocated), chnk->guard_offset);
-		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->size);
+		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->csize);
 		TEST_ASSERT_EQUAL_STRING(bool_to_string(array[i].allocated), bool_to_string(chnk->allocated));
 	}
 	TEST_ASSERT_NULL_MESSAGE(chnk, "more chunk than expected");
@@ -125,10 +128,12 @@ TEST_GROUP_RUNNER(mm_chunk)
 	 * n : not allocated
 	 * . : null
 	 * a : allocated
-	 *
-	 * this + next =>
+	 */
+
+	/* merge this + next => this
 	 * a + . = a
 	 * n + . = n
+	 * si x.size + y.size >= max => x + y
 	 * n + n = n
 	 * n + a = a (data moved from a)
 	 * a + n = a
@@ -140,8 +145,11 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, merge_not_alloc_alloc);
 	RUN_TEST_CASE(mm_chunk, merge_alloc_not_alloc);
 	RUN_TEST_CASE(mm_chunk, merge_alloc_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_bigblocks);
+	/*
+	 */
 	RUN_TEST_CASE(mm_chunk, split);
-	RUN_TEST_CASE(mm_chunk, aggregate);
+	RUN_TEST_CASE(mm_chunk, split_too_small);
 }
 TEST_SETUP(mm_chunk)
 {
@@ -227,13 +235,45 @@ TEST(mm_chunk, merge_alloc_alloc)
 	eval_fill_with(second, 'B', payload_b);
 }
 
+TEST(mm_chunk, merge_bigblocks)
+{
+	mock_memmgr_setup();
+	mm_chunk_t *gigablock = (mm_chunk_t *)mm_alloc(2*UINT15_MAX*MM_CFG_ALIGNMENT);
+
+	UT_PTR_SET(gs_chnk, gigablock);
+
+	test_chunk_state_t a_state[] = {{UINT15_MAX/2, false}, {UINT15_MAX/2 +1 , false}, {UINT15_MAX, false}};
+	test_chunk_state_t a_expect[] = {{UINT15_MAX, false}, {UINT15_MAX, false}};
+	prepare_chunk(a_state, 3);
+
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_expect, 2);
+
+	mm_chunk_merge(gs_chnk);
+	eval_chunk_status(a_expect, 2);
+
+	mm_free(gigablock);
+}
+
 TEST(mm_chunk, split)
 {
-	TEST_FAIL();
+	test_chunk_state_t a_state[] = {{256, false}};
+	test_chunk_state_t a_expect[] = {{128, false}, {128, false}};
+	test_chunk_state_t a_expect_2[] = {{64, false}, {64, false}, {128, false}};
+	prepare_chunk(a_state, 1);
+
+	mm_chunk_split(gs_chnk, 128);
+	eval_chunk_status(a_expect, 2);
+
+	mm_chunk_split(gs_chnk, 64);
+	eval_chunk_status(a_expect_2, 3);
 }
 
-TEST(mm_chunk, aggregate)
+TEST(mm_chunk, split_too_small)
 {
-	TEST_FAIL();
-}
+	test_chunk_state_t a_state[] = {{50+(mm_min_csize()/2), false}};
+	prepare_chunk(a_state, 1);
 
+	mm_chunk_split(gs_chnk, 50);
+	eval_chunk_status(a_state, 1);
+}
