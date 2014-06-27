@@ -34,19 +34,16 @@ typedef void *		(* mm_realloc_f)		(void *old_ptr,
 							 uint32_t total_csize);
 typedef void		(* mm_free_f)			(void *ptr);
 
-typedef struct
-{
-	uint32_t	size;
-	uint16_t	total_csize;
-	bool		allocated;
-	void *		allocator;
-} mm_stats_t;
 
 /* Public functions ----------------------------------------------------------*/
 /**
  * Initialise the memory manager.
+ * @param	heap	Heap buffer.
+ *			Must be aligned according to MM_CFG_ALIGNMENT;
+ * @param	size	Heap buffer size in byte.
  */
-void			mm_init				(void);
+void			mm_init				(uint8_t *heap,
+							 uint32_t size);
 /**
  * Check heap integrity.
  */
@@ -55,9 +52,6 @@ void			mm_check			(void);
  * Gives chunk number.
  * @return Integer.
  */
-uint32_t		mm_nb_chunk			(void);
-void			mm_chunk_info			(mm_stats_t *stats,
-							 uint32_t size);
 void			mm_allocator_set		(void *ptr,
 							 void *lr);
 

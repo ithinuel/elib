@@ -30,15 +30,12 @@
 /* Type definitions ----------------------------------------------------------*/
 typedef struct
 {
-	mm_chunk_t	*first;
+	uint8_t		*heap;
 	mutex_t		*mtx;
-	uint32_t	counter;
 } mm_heap_t;
 
 /* Prototypes ----------------------------------------------------------------*/
-static mm_chunk_t *		mm_find_first_free	(uint16_t wanted_size);
-
-static int32_t			mm_wanted_size		(uint32_t size);
+static int32_t			mm_wanted_csize		(uint32_t size);
 static void			mm_lock			(void);
 static void			mm_unlock		(void);
 
@@ -51,8 +48,7 @@ static void *			mm_realloc_impl		(void *old_ptr,
 static void 			mm_free_impl		(void *ptr);
 
 /* Variables -----------------------------------------------------------------*/
-static mm_heap_t	gs_heap;
-static uint8_t		gs_raw[MM_CFG_HEAP_SIZE] __attribute__((aligned(MM_CFG_ALIGNMENT)));
+static mm_heap_t	gs_memmgr = {NULL};
 
 MOCKABLE mm_alloc_f	mm_alloc = mm_alloc_impl;
 MOCKABLE mm_alloc_f	mm_zalloc = mm_zalloc_impl;
@@ -61,62 +57,49 @@ MOCKABLE mm_realloc_f	mm_realloc = mm_realloc_impl;
 MOCKABLE mm_free_f	mm_free = mm_free_impl;
 
 /* Private Functions definitions ---------------------------------------------*/
-static mm_chunk_t *mm_find_first_free(uint16_t wanted_size)
+static int32_t mm_wanted_csize(uint32_t size)
 {
-	mm_chunk_t *chnk = gs_heap.first;
+	int32_t wanted_csize = mm_to_csize(size);
+	wanted_csize += mm_header_csize() + MM_CFG_GUARD_SIZE;
 
-	while ((chnk != NULL) &&
-	       ((chnk->csize < wanted_size) || chnk->allocated))
-	{
-		chnk = mm_chunk_next_get(chnk);
-	}
-
-	return chnk;
-}
-
-static int32_t mm_wanted_size(uint32_t size)
-{
-	int32_t wanted_size = mm_to_csize(size);
-	wanted_size += mm_header_csize() + MM_CFG_GUARD_SIZE;
-
-	if (wanted_size > UINT15_MAX) {
+	if (wanted_csize > UINT15_MAX) {
 		return -1;
 	}
-	return wanted_size;
+	return wanted_csize;
 }
 
 static void mm_lock(void)
 {
-	if (gs_heap.mtx != NULL) {
-		mutex_lock(gs_heap.mtx, -1);
+	if (gs_memmgr.mtx != NULL) {
+		mutex_lock(gs_memmgr.mtx, -1);
 	}
 }
 
 static void mm_unlock(void)
 {
-	if (gs_heap.mtx != NULL) {
-		mutex_unlock(gs_heap.mtx);
+	if (gs_memmgr.mtx != NULL) {
+		mutex_unlock(gs_memmgr.mtx);
 	}
 }
 
 static void *mm_alloc_impl(uint32_t size)
 {
-	int32_t wanted_size = 0;
+	int32_t wanted_csize = 0;
 	void *ptr = NULL;
 	mm_chunk_t *chnk = NULL;
 	if (size == 0) {
 		return NULL;
 	}
 
-	wanted_size = mm_wanted_size(size);
-	if (wanted_size < 0) {
+	wanted_csize = mm_wanted_csize(size);
+	if (wanted_csize < 0) {
 		return NULL;
 	}
 
 	mm_lock();
-	chnk = mm_find_first_free(wanted_size);
+	chnk = mm_find_first_free(wanted_csize);
 	if (chnk != NULL) {
-		mm_chunk_t *new = mm_chunk_split(chnk, wanted_size);
+		mm_chunk_t *new = mm_chunk_split(chnk, wanted_csize);
 		if (new != NULL) {
 			mm_chunk_t *next = mm_chunk_next_get(new);
 			if ((next != NULL) && !next->allocated){
@@ -159,9 +142,15 @@ static void *mm_calloc_impl(uint32_t n, uint32_t size)
 
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
-	int32_t wanted_size = 0;
+	int32_t wanted_csize = 0;
 	uint32_t available_on_current = 0;
+	uint32_t tmp = 0;
+	bool eat_next = false;
+	bool eat_prev = false;
+	
 	mm_chunk_t *chnk = NULL;
+	mm_chunk_t *next = NULL;
+	mm_chunk_t *prev = NULL;
 	void *new_ptr = NULL;
 
 	if (size == 0) {
@@ -169,8 +158,8 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		return NULL;
 	}
 
-	wanted_size = mm_wanted_size(size);
-	if (wanted_size < 0) {
+	wanted_csize = mm_wanted_csize(size);
+	if (wanted_csize < 0) {
 		return NULL;
 	}
 
@@ -180,15 +169,38 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 
 	mm_lock();
 	chnk = mm_tochunk(old_ptr);
-	available_on_current = 0;//mm_chunk_aggregate(chnk, true);
+	available_on_current = chnk->csize;
+	next = mm_chunk_next_get(chnk);
+	if ((next != NULL) && !next->allocated) {
+		tmp = available_on_current + next->csize;
+		if (tmp <= UINT15_MAX) {
+			available_on_current = tmp;
+			eat_next = true;
+		}
+	}
+	prev = mm_chunk_prev_get(chnk);
+	if ((prev != NULL) && !prev->allocated) {
+		tmp = available_on_current + prev->csize;
+		if (tmp <= UINT15_MAX) {
+			available_on_current = tmp;
+			eat_prev = true;
+		}
+	}
 
-	if (available_on_current >= wanted_size) {
+	if (available_on_current >= wanted_csize) {
 		/* we're ok to merge & shrink this chunk*/
-		//mm_chunk_aggregate(chnk, false);
+		if (eat_next) {
+			mm_chunk_merge(chnk);
+		}
+		if (eat_prev) {
+			mm_chunk_merge(prev);
+			chnk = prev;
+		}
+		
 		mm_chunk_guard_set(chnk, size);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
-		mm_chunk_split(chnk, wanted_size);
+		mm_chunk_split(chnk, wanted_csize);
 		new_ptr = mm_toptr(chnk);
 	} else {
 		new_ptr = mm_alloc_impl(size);
@@ -231,69 +243,40 @@ static void mm_free_impl(void *ptr)
 }
 
 /* Functions definitions -----------------------------------------------------*/
-void mm_init(void)
+void mm_init(uint8_t *heap, uint32_t size)
 {
-	mm_chunk_t *chnk = (mm_chunk_t *)gs_raw;
-	gs_heap.counter = 0;
+	gs_memmgr.heap = heap;
+	mm_chunk_t *chnk = (mm_chunk_t *)heap;
 
+	uint32_t count = 0;
+	mm_chunk_t *first = chnk;
 	mm_chunk_t *prev = NULL;
-	uint32_t heap_size = MM_CFG_HEAP_SIZE/MM_CFG_ALIGNMENT;
+	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
 
-	gs_heap.first = chnk;
 	while (heap_size >= mm_min_csize()) {
 		uint16_t size = umin(heap_size, UINT15_MAX);
 		heap_size -= size;
 
 		mm_chunk_init(chnk, prev, size);
-		gs_heap.counter++;
+		count++;
 
 		prev = chnk;
 		chnk = mm_compute_next(chnk, chnk->csize);
 	}
-	mm_chunk_boundary_set(prev);
-	gs_heap.mtx = mutex_new(false, "memmgr");
+	mm_chunk_boundary_set(first, prev, count);
+	gs_memmgr.mtx = mutex_new(false, "memmgr");
 }
 
 void mm_check(void)
 {
 	mm_lock();
-	mm_chunk_t *chnk = gs_heap.first;
+	mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
 	mm_chunk_validate(chnk);
 	while (chnk != NULL) {
 		chnk = mm_chunk_next_get(chnk);
 	}
 	mm_unlock();
 }
-
-uint32_t mm_nb_chunk(void)
-{
-	return gs_heap.counter;
-}
-
-void mm_chunk_info(mm_stats_t *stats, uint32_t size)
-{
-	uint32_t cnt = 0;
-
-	if (stats == NULL) {
-		return;
-	}
-
-	mm_lock();
-	mm_chunk_t *chnk = gs_heap.first;
-	mm_chunk_validate(chnk);
-
-	while ((chnk != NULL) && (cnt < size)) {
-		stats[cnt].allocated = chnk->allocated;
-		stats[cnt].allocator = chnk->allocator;
-		stats[cnt].size = chnk->guard_offset;
-		stats[cnt].total_csize = chnk->csize;
-
-		cnt ++;
-		chnk = mm_chunk_next_get(chnk);
-	}
-	mm_unlock();
-}
-
 
 void mm_allocator_set(void *ptr, void *lr)
 {

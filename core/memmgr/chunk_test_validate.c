@@ -32,7 +32,7 @@ static void		eval_validate_xorsum			(void);
 
 /* variables */
 static uint8_t gs_raw[1024];
-static mm_chunk_t *gs_chnk = (mm_chunk_t *)gs_raw;
+static mm_chunk_t *gs_chnk __attribute__((aligned(MM_CFG_ALIGNMENT))) = (mm_chunk_t *)gs_raw;
 
 /* functions's definitions */
 static void eval_validate_xorsum(void)
@@ -52,6 +52,7 @@ TEST_GROUP_RUNNER(mm_chunk_validate)
 {
 	RUN_TEST_CASE(mm_chunk_validate, validate);
 	RUN_TEST_CASE(mm_chunk_validate, validate_alignment);
+	RUN_TEST_CASE(mm_chunk_validate, validate_out_of_bound);
 	RUN_TEST_CASE(mm_chunk_validate, validate_overflow);
 	RUN_TEST_CASE(mm_chunk_validate, validate_corruption_prev_size);
 	RUN_TEST_CASE(mm_chunk_validate, validate_corruption_allocated);
@@ -63,6 +64,7 @@ TEST_GROUP_RUNNER(mm_chunk_validate)
 TEST_SETUP(mm_chunk_validate)
 {
 	mm_chunk_init(gs_chnk, NULL, 256);
+	mm_chunk_boundary_set(gs_chnk, gs_chnk, 1);
 }
 TEST_TEAR_DOWN(mm_chunk_validate)
 {
@@ -80,6 +82,25 @@ TEST(mm_chunk_validate, validate_alignment)
 	die_Expect("MM: alignment");
 	VERIFY_DIE_START
 	mm_chunk_validate((mm_chunk_t *)((uintptr_t)gs_chnk + 1));
+	VERIFY_DIE_END
+	die_Verify();
+}
+
+TEST(mm_chunk_validate, validate_out_of_bound)
+{
+	die_Expect("MM: out of bound");
+	VERIFY_DIE_START
+	
+	mm_chunk_validate((mm_chunk_t *)MM_CFG_ALIGNMENT);
+	
+	VERIFY_DIE_END
+	die_Verify();
+	
+	die_Expect("MM: out of bound");
+	VERIFY_DIE_START
+	
+	mm_chunk_validate((mm_chunk_t *)(gs_raw+MM_CFG_ALIGNMENT));
+	
 	VERIFY_DIE_END
 	die_Verify();
 }

@@ -21,38 +21,41 @@
 
 #include "unity_fixture.h"
 #include "tests/tests.h"
+#include "memmgr/chunk.h"
 #include "os/memmgr.h"
 #include "memmgr_conf.h"
 
 /* helper functions ----------------------------------------------------------*/
-void eval_not_null_aligned_and_filled(void *ptr, int32_t size, uint8_t val, char *msg)
+typedef struct
 {
-	TEST_ASSERT_NOT_NULL(ptr);
-	TEST_ASSERT(((uintptr_t)ptr % MM_CFG_ALIGNMENT) == 0);
-	for(int32_t i = 0; i < size; i++) {
-		if (((uint8_t *)ptr)[i] != val) {
-			TEST_FAIL_MESSAGE(msg);
-		}
-	}
-}
+	uint16_t size;
+	bool	 allocated;
+} test_mem_state_t;
+
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr);
 
 TEST_GROUP_RUNNER(memmgr)
 {
-	RUN_TEST_CASE(memmgr, zalloc_free);
-	RUN_TEST_CASE(memmgr, double_free);
-	RUN_TEST_CASE(memmgr, invalid_ptr);
-	RUN_TEST_CASE(memmgr, realloc_expand);
-	RUN_TEST_CASE(memmgr, realloc_shrink);
-	RUN_TEST_CASE(memmgr, infos);
-	RUN_TEST_CASE(memmgr, infos_with_invalid_params);
+	RUN_TEST_CASE(memmgr, _alloc);
+	RUN_TEST_CASE(memmgr, _zalloc);
+	RUN_TEST_CASE(memmgr, _calloc);
+	RUN_TEST_CASE(memmgr, _free);
+	
+	RUN_TEST_CASE(memmgr, alloc_zero);
+	RUN_TEST_CASE(memmgr, alloc_no_available_chunk);
+	RUN_TEST_CASE(memmgr, alloc_far_too_big);
+	RUN_TEST_CASE(memmgr, alloc_cant_split);
+	RUN_TEST_CASE(memmgr, alloc_cant_merge_allocated);
+	RUN_TEST_CASE(memmgr, alloc_cant_merge_last);
+	
+	RUN_TEST_CASE(memmgr, free_cant_refree);
 }
 
 TEST_SETUP(memmgr)
 {
-	mm_init();
+	mm_init(gs_raw_small, 1024);
 }
 
 TEST_TEAR_DOWN(memmgr)
@@ -61,184 +64,70 @@ TEST_TEAR_DOWN(memmgr)
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(memmgr, rien)
+TEST(memmgr, _alloc)
+{
+	TEST_ASSERT_NOT_NULL(mm_alloc(12));
+}
+
+TEST(memmgr, _zalloc)
+{
+	
+	uint8_t a_zero[12];
+	memset(a_zero, 0, 12);
+	
+	uint8_t *ptr = mm_zalloc(12);
+	TEST_ASSERT_EQUAL_MEMORY(a_zero, ptr, 12);
+}
+
+TEST(memmgr, _calloc)
+{
+	uint32_t a_zero[12];
+	memset(a_zero, 0, 12*sizeof(uint32_t));
+	
+	uint8_t *ptr = mm_calloc(12, sizeof(uint32_t));
+	TEST_ASSERT_EQUAL_MEMORY(a_zero, ptr, 12*sizeof(uint32_t));
+}
+
+TEST(memmgr, _free)
+{
+	uint8_t *ptr = mm_alloc(12);
+	memset(ptr, 'A', 12);
+	mm_free(ptr);
+}
+	
+TEST(memmgr, alloc_zero)
+{
+	TEST_ASSERT_NULL(mm_alloc(0));
+}
+
+TEST(memmgr, alloc_no_available_chunk)
+{
+	mm_alloc(512);
+	TEST_ASSERT_NULL(mm_alloc(784));
+}
+
+TEST(memmgr, alloc_far_too_big)
+{
+	TEST_ASSERT_NULL(mm_alloc(2*1024));
+}
+
+TEST(memmgr, alloc_cant_split)
 {
 	TEST_FAIL();
 }
 
-TEST(memmgr, zalloc_free)
+TEST(memmgr, alloc_cant_merge_allocated)
 {
-	void *ptr2 = NULL;
-	void *ptr1 = mm_zalloc(0);
-	TEST_ASSERT_NULL(ptr1);
-
-	ptr1 = mm_zalloc(32);
-	ptr2 = mm_zalloc(512);
-	TEST_ASSERT_NOT_EQUAL(ptr1, ptr2);
-	eval_not_null_aligned_and_filled(ptr1, 32, 0, "zalloc does not fill with 0");
-	eval_not_null_aligned_and_filled(ptr2, 512, 0, "zalloc does not fill with 0");
-
-	memset(ptr1, 55, 32);
-	memset(ptr2, 55, 512);
-
-	mm_free(ptr1);
-	mm_free(ptr2);
-
-	mm_free(NULL);
-
-	TEST_ASSERT_NULL(mm_zalloc(2*1024*1024));
+	TEST_FAIL();
 }
 
-TEST(memmgr, double_free)
+TEST(memmgr, alloc_cant_merge_last)
 {
-	void *ptr = mm_alloc(1);
-	mm_free(ptr);
-
-	die_Expect("MM: double free");
-	VERIFY_DIE_START
-	mm_free(ptr);
-	VERIFY_DIE_END
-	die_Verify();
-
-	/* reset for tear down mm_check */
-	mm_init();
+	TEST_FAIL();
 }
 
-TEST(memmgr, invalid_ptr)
+TEST(memmgr, free_cant_refree)
 {
-	uint8_t *ptr = NULL;
-
-	die_Expect("MM: alignment");
-	VERIFY_DIE_START
-	ptr = mm_zalloc(3);
-	mm_free(ptr+1);
-	VERIFY_DIE_END
-	die_Verify();
-
-	/*die_Expect("MM: out of bound");
-	VERIFY_DIE_START
-	mm_free((void*)4);
-	VERIFY_DIE_END
-	die_Verify();
-
-	die_Expect("MM: out of bound");
-	VERIFY_DIE_START
-	mm_free((void*)0xFFFFFFFF0);
-	VERIFY_DIE_END
-	die_Verify();*/
-
-	die_Expect("MM: xorsum");
-	VERIFY_DIE_START
-	ptr = mm_zalloc(35);
-	ptr -= 5;
-	*((uint32_t*)ptr) = ~(*((uint32_t*)ptr));
-	ptr += 5;
-	mm_free(ptr);
-	VERIFY_DIE_END
-	die_Verify();
-
-	mm_init();
-
-	die_Expect("MM: overflowed");
-	VERIFY_DIE_START
-	ptr = mm_zalloc(35);
-	eval_not_null_aligned_and_filled(ptr, 35, 0, "zalloc does not fill with 0");
-	memset(ptr, 50, 50);
-	mm_free(ptr);
-	VERIFY_DIE_END
-	die_Verify();
-
-	mm_init();
+	TEST_FAIL();
 }
 
-TEST(memmgr, realloc_expand)
-{
-	void *ptr1 = NULL;
-
-	ptr1 = mm_realloc(ptr1, 11);
-	memset(ptr1, 'a', 11);
-	ptr1 = mm_realloc(ptr1, 50);
-	eval_not_null_aligned_and_filled(ptr1, 11, 'a', "data has been lost");
-	memset(ptr1, 'a', 50);
-	ptr1 = mm_realloc(ptr1, 100);
-	eval_not_null_aligned_and_filled(ptr1, 50, 'a', "data has been lost");
-	memset(ptr1, 'a', 100);
-
-	void *ptr2 = mm_zalloc(12);
-	ptr1 = mm_realloc(ptr1, 200);
-	eval_not_null_aligned_and_filled(ptr1, 100, 'a', "data has been lost");
-
-	TEST_ASSERT_NULL(mm_realloc(ptr1, 2*1024*1024));
-
-	mm_free(ptr2);
-	mm_free(ptr1);
-}
-
-TEST(memmgr, realloc_shrink)
-{
-	void *ptr1 = mm_zalloc(1024);
-	void *ptr2 = mm_zalloc(12);
-	void *ptr3 = mm_zalloc(1024);
-	void *ptr4 = mm_zalloc(12);
-
-	mm_free(ptr1);
-	memset(ptr3, 'a', 1024);
-
-	ptr3 = mm_realloc(ptr3, 1024);
-	eval_not_null_aligned_and_filled(ptr3, 1024, 'a', "data has been lost");
-
-	ptr3 = mm_realloc(ptr3, 512);
-	eval_not_null_aligned_and_filled(ptr3, 512, 'a', "data has been lost");
-	memset(ptr3, 'a', 512);
-
-
-	ptr3 = mm_realloc(ptr3, 0);
-	TEST_ASSERT_NULL(ptr3);
-
-
-	mm_free(ptr2);
-	mm_free(ptr4);
-}
-
-TEST(memmgr, infos)
-{
-	/* base count is total/maxblocksize plus mutex */
-	uint32_t base = MM_CFG_HEAP_SIZE/((UINT16_MAX/2)*MM_CFG_ALIGNMENT) + 1;
-	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
-
-	/* we will allocate stat table */
-	base += 1;
-
-	mm_stats_t *stats = mm_calloc(base, sizeof(mm_stats_t));
-	mm_allocator_update(stats);
-	TEST_ASSERT_NOT_NULL(stats);
-	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
-
-	mm_chunk_info(stats, base);
-	for (int32_t i = 0; i < base; i++) {
-		if (i < 2) {
-			TEST_ASSERT_TRUE(stats[i].allocated);
-			TEST_ASSERT_NOT_EQUAL(0, stats[i].size);
-		} else {
-			TEST_ASSERT_FALSE(stats[i].allocated);
-			TEST_ASSERT_EQUAL_UINT32(0, stats[i].size);
-		}
-	}
-	mm_free(stats);
-	TEST_ASSERT_EQUAL_INT(base-1, mm_nb_chunk());
-}
-
-TEST(memmgr, infos_with_invalid_params)
-{
-	mm_stats_t stats = {0};
-
-	mm_chunk_info(NULL, 75);
-	mm_chunk_info(&stats, 0);
-	TEST_ASSERT_FALSE(stats.allocated);
-	TEST_ASSERT_NULL(stats.allocator);
-	TEST_ASSERT_EQUAL_UINT32(0, stats.size);
-	TEST_ASSERT_EQUAL_UINT32(0, stats.total_csize);
-
-
-	mm_allocator_update(NULL);
-}

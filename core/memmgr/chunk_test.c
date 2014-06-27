@@ -68,7 +68,7 @@ static void prepare_chunk(test_chunk_state_t *array, uint32_t array_len)
 		prev = chnk;
 		chnk = mm_compute_next(chnk, csize);
 	}
-	mm_chunk_boundary_set(prev);
+	mm_chunk_boundary_set(gs_chnk, prev, array_len);
 }
 
 static char *bool_to_string(bool val)
@@ -80,6 +80,9 @@ static void eval_chunk_status(test_chunk_state_t *array, uint32_t array_len)
 {
 	mm_chunk_t *chnk = gs_chnk;
 	uint32_t i = 0;
+	
+	TEST_ASSERT_EQUAL_UINT32(array_len, mm_chunk_count());
+	
 	for (i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
 		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->csize);
@@ -125,21 +128,6 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, next_get);
 	RUN_TEST_CASE(mm_chunk, prev_get);
 
-	/*
-	 * n : not allocated
-	 * . : null
-	 * a : allocated
-	 */
-
-	/* merge this + next => this
-	 * a + . = a
-	 * n + . = n
-	 * si x.size + y.size >= max => x + y
-	 * n + n = n
-	 * n + a = a (data moved from a)
-	 * a + n = a
-	 * a + a = !!die!!
-	 */
 	RUN_TEST_CASE(mm_chunk, merge_alloc_null);
 	RUN_TEST_CASE(mm_chunk, merge_not_alloc_null);
 	RUN_TEST_CASE(mm_chunk, merge_both_not_alloc);
@@ -147,10 +135,13 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, merge_alloc_not_alloc);
 	RUN_TEST_CASE(mm_chunk, merge_alloc_alloc);
 	RUN_TEST_CASE(mm_chunk, merge_bigblocks);
-	/*
-	 */
+	
 	RUN_TEST_CASE(mm_chunk, split);
 	RUN_TEST_CASE(mm_chunk, split_too_small);
+	
+	RUN_TEST_CASE(mm_chunk, find_first_free);
+	
+	RUN_TEST_CASE(mm_chunk, info);
 }
 TEST_SETUP(mm_chunk)
 {
@@ -303,4 +294,38 @@ TEST(mm_chunk, split_too_small)
 
 	TEST_ASSERT_NULL(mm_chunk_split(gs_chnk, 50));
 	eval_chunk_status(a_state, 1);
+}
+
+TEST(mm_chunk, find_first_free)
+{
+	test_chunk_state_t a_state[] = {{64, true}, {64, false}, {128, true}};
+	prepare_chunk(a_state, 3);
+	
+	mm_chunk_t *expect_ptr = mm_compute_next(gs_chnk, 64);
+	
+	TEST_ASSERT_EQUAL_PTR(expect_ptr, mm_find_first_free(0));
+	TEST_ASSERT_EQUAL_PTR(expect_ptr, mm_find_first_free(12));
+	TEST_ASSERT_EQUAL_PTR(expect_ptr, mm_find_first_free(64));
+	TEST_ASSERT_NULL(mm_find_first_free(65));
+	TEST_ASSERT_NULL(mm_find_first_free(128));
+	
+	eval_chunk_status(a_state, 3);
+}
+
+TEST(mm_chunk, info)
+{
+	test_chunk_state_t a_state[] = {{64, true}, {64, false}, {128, true}};
+	prepare_chunk(a_state, 3);
+	mm_info_t a_expect[4] = {{0, 64, true, NULL},{0, 64, false, NULL}, {0, 128, true, NULL}, {0, 0, false, NULL}};
+	mm_info_t a_expect_2[4] = {{0, 64, true, NULL},{0, 64, false, NULL}, {0, 0, false, NULL}, {0, 0, false, NULL}};
+
+	mm_info_t a_out[4];
+	memset(a_out, 0, sizeof(a_out));
+	
+	mm_chunk_info(a_out, 4);
+	TEST_ASSERT_EQUAL_MEMORY(a_expect, a_out, sizeof(a_expect));
+	
+	memset(a_out, 0, sizeof(a_out));
+	mm_chunk_info(a_out, 2);
+	TEST_ASSERT_EQUAL_MEMORY(a_expect_2, a_out, sizeof(a_expect_2));
 }

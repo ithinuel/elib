@@ -37,9 +37,19 @@ typedef struct
 	void *		allocator;
 } mm_chunk_t;
 
+typedef struct
+{
+	uint32_t	size;
+	uint16_t	total_csize;
+	bool		allocated;
+	void *		allocator;
+} mm_info_t;
+
 
 /* Functions prototypes ------------------------------------------------------*/
-void			mm_chunk_boundary_set	(mm_chunk_t *last);
+void			mm_chunk_boundary_set	(mm_chunk_t *first,
+						 mm_chunk_t *last,
+						 uint32_t count);
 void			mm_chunk_init		(mm_chunk_t *this,
 						 mm_chunk_t *prev,
 						 uint16_t csize);
@@ -60,6 +70,11 @@ mm_chunk_t *		mm_chunk_split		(mm_chunk_t *this,
 
 void *			mm_toptr		(mm_chunk_t *this);
 mm_chunk_t *		mm_tochunk		(void *ptr);
+
+mm_chunk_t *		mm_find_first_free	(uint16_t wanted_csize);
+uint32_t		mm_chunk_count		(void);
+void			mm_chunk_info		(mm_info_t *infos,
+						 uint32_t size);
 
 uint32_t 		mm_to_csize		(uint32_t size);
 uint16_t		mm_min_csize		(void);

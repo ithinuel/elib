@@ -30,20 +30,22 @@
 /* Type definitions ----------------------------------------------------------*/
 typedef struct
 {
+	mm_chunk_t	*first;
 	mm_chunk_t	*last;
+	uint32_t	count;
 } mm_boundary_t;
 
 /* Prototypes ----------------------------------------------------------------*/
 /* Variables -----------------------------------------------------------------*/
-static mm_boundary_t gs_chunk_boundary = {NULL};
-
-
+static mm_boundary_t gs_chunk_boundary = {NULL, NULL};
 
 /* Private Functions definitions ---------------------------------------------*/
 /* Functions' definitions ----------------------------------------------------*/
-void mm_chunk_boundary_set(mm_chunk_t *last)
+void mm_chunk_boundary_set(mm_chunk_t *first, mm_chunk_t *last, uint32_t count)
 {
+	gs_chunk_boundary.first = first;
 	gs_chunk_boundary.last = last;
+	gs_chunk_boundary.count = count;
 }
 
 void mm_chunk_init(mm_chunk_t *this, mm_chunk_t *prev, uint16_t csize)
@@ -126,6 +128,11 @@ void mm_chunk_validate(mm_chunk_t *this)
 	if (((uintptr_t)this % MM_CFG_ALIGNMENT) != 0) {
 		die("MM: alignment");
 	}
+	
+	if ((this < gs_chunk_boundary.first) ||
+	    (gs_chunk_boundary.last < this)) {
+		die("MM: out of bound");
+	}
 
 	// have a valid header chksum
 	if (mm_chunk_xorsum(this) != this->xorsum) {
@@ -153,6 +160,7 @@ void mm_chunk_merge(mm_chunk_t *this)
 	if (size > UINT15_MAX) {
 		return;
 	}
+	gs_chunk_boundary.count --;
 	this->csize = size;
 	
 	if (next->allocated) {
@@ -189,6 +197,7 @@ mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 	mm_chunk_t *new = mm_compute_next(this, csize);
 
 	mm_chunk_init(new, this, new_size);
+	gs_chunk_boundary.count ++;
 	
 	if (next != NULL) {
 		next->prev_size = new_size;
@@ -206,6 +215,53 @@ void *mm_toptr(mm_chunk_t *this)
 	return ptr + (sizeof(mm_chunk_t));
 }
 
+mm_chunk_t *mm_tochunk(void *ptr)
+{
+	if (ptr == NULL) {
+		return NULL;
+	}
+	mm_chunk_t *chunk = ptr - (mm_header_csize()*MM_CFG_ALIGNMENT);
+	mm_chunk_validate(chunk);
+	return chunk;
+}
+
+mm_chunk_t *mm_find_first_free(uint16_t wanted_csize)
+{
+	mm_chunk_t *chnk = gs_chunk_boundary.first;
+	mm_chunk_validate(chnk);
+	
+	while ((chnk != NULL) &&
+	       ((chnk->csize < wanted_csize) || chnk->allocated))
+	{
+		chnk = mm_chunk_next_get(chnk);
+	}
+
+	return chnk;
+}
+
+uint32_t mm_chunk_count(void)
+{
+	return gs_chunk_boundary.count;
+}
+
+void mm_chunk_info(mm_info_t *infos, uint32_t size)
+{
+	uint32_t cnt = 0;
+
+	mm_chunk_t *chnk = gs_chunk_boundary.first;
+	mm_chunk_validate(chnk);
+
+	while ((chnk != NULL) && (cnt < size)) {
+		infos[cnt].allocated = chnk->allocated;
+		infos[cnt].allocator = chnk->allocator;
+		infos[cnt].size = chnk->guard_offset;
+		infos[cnt].total_csize = chnk->csize;
+
+		cnt ++;
+		chnk = mm_chunk_next_get(chnk);
+	}
+}
+
 uint32_t mm_to_csize(uint32_t size)
 {
 	return ((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT);
@@ -219,15 +275,5 @@ uint16_t mm_min_csize(void)
 uint16_t mm_header_csize(void)
 {
 	return mm_to_csize(sizeof(mm_chunk_t));
-}
-
-mm_chunk_t *mm_tochunk(void *ptr)
-{
-	if (ptr == NULL) {
-		return NULL;
-	}
-	mm_chunk_t *chunk = ptr - (mm_header_csize()*MM_CFG_ALIGNMENT);
-	mm_chunk_validate(chunk);
-	return chunk;
 }
 
