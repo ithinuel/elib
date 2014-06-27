@@ -175,13 +175,13 @@ void mm_chunk_merge(mm_chunk_t *this)
 	}
 }
 
-void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
+mm_chunk_t *mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 {
 	mm_chunk_t *next = mm_chunk_next_get(this);
 	
 	uint32_t new_size = this->csize - csize;
 	if (new_size < mm_min_csize()) {
-		return;
+		return NULL;
 	}
 
 	this->csize = csize;
@@ -196,6 +196,8 @@ void mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 	} else {
 		gs_chunk_boundary.last = new;
 	}
+
+	return new;
 }
 
 void *mm_toptr(mm_chunk_t *this)

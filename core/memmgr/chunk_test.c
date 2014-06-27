@@ -285,18 +285,22 @@ TEST(mm_chunk, split)
 	test_chunk_state_t a_expect_2[] = {{64, false}, {64, false}, {128, false}};
 	prepare_chunk(a_state, 1);
 
-	mm_chunk_split(gs_chnk, 128);
+	mm_chunk_t *expect_ptr = mm_compute_next(gs_chnk, 128);
+	mm_chunk_t *expect_ptr_2 = mm_compute_next(gs_chnk, 64);
+
+	TEST_ASSERT_EQUAL_PTR(expect_ptr, mm_chunk_split(gs_chnk, 128));
 	eval_chunk_status(a_expect, 2);
 
-	mm_chunk_split(gs_chnk, 64);
+
+	TEST_ASSERT_EQUAL_PTR(expect_ptr_2, mm_chunk_split(gs_chnk, 64));
 	eval_chunk_status(a_expect_2, 3);
 }
 
 TEST(mm_chunk, split_too_small)
 {
-	test_chunk_state_t a_state[] = {{50+(mm_min_csize()/2), false}};
+	test_chunk_state_t a_state[] = {{50 + (mm_min_csize()/2), false}};
 	prepare_chunk(a_state, 1);
 
-	mm_chunk_split(gs_chnk, 50);
+	TEST_ASSERT_NULL(mm_chunk_split(gs_chnk, 50));
 	eval_chunk_status(a_state, 1);
 }
