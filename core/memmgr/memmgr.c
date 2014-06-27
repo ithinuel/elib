@@ -196,7 +196,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
 		}
 		chnk = mm_tochunk(new_ptr);
-		mm_free(old_ptr);
+		mm_free_impl(old_ptr);
 	}
 
 	chnk->allocator = __builtin_return_address(1);
@@ -213,7 +213,19 @@ static void mm_free_impl(void *ptr)
 		if (!chnk->allocated) {
 			die("MM: double free");
 		}
-	//	mm_chunk_delete(chnk);
+
+		chnk->allocated = false;
+		chnk->allocator = NULL;
+		chnk->xorsum = mm_chunk_xorsum(chnk);
+
+		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
+		if ((sibbling != NULL) && !sibbling->allocated) {
+			mm_chunk_merge(chnk);
+		}
+		sibbling = mm_chunk_prev_get(chnk);
+		if ((sibbling != NULL) && !sibbling->allocated) {
+			mm_chunk_merge(sibbling);
+		}
 	}
 	mm_unlock();
 }

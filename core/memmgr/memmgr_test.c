@@ -68,10 +68,6 @@ TEST(memmgr, rien)
 
 TEST(memmgr, zalloc_free)
 {
-	void *ptr6 = NULL;
-	void *ptr5 = NULL;
-	void *ptr4 = NULL;
-	void *ptr3 = NULL;
 	void *ptr2 = NULL;
 	void *ptr1 = mm_zalloc(0);
 	TEST_ASSERT_NULL(ptr1);
@@ -91,44 +87,6 @@ TEST(memmgr, zalloc_free)
 	mm_free(NULL);
 
 	TEST_ASSERT_NULL(mm_zalloc(2*1024*1024));
-
-	ptr1 = mm_zalloc(31);
-	TEST_ASSERT_NOT_NULL(ptr1);
-	ptr2 = mm_zalloc(130877);
-	TEST_ASSERT_NOT_NULL(ptr2);
-	ptr3 = mm_zalloc(29);
-	TEST_ASSERT_NOT_NULL(ptr3);
-	ptr4 = mm_zalloc(22);
-	TEST_ASSERT_NOT_NULL(ptr4);
-	ptr6 = mm_zalloc(8);
-	TEST_ASSERT_NOT_NULL(ptr6);
-
-	mm_free(ptr4);
-	mm_free(ptr5);
-
-	mm_free(ptr6);
-
-	ptr4 = mm_zalloc(54);
-	TEST_ASSERT_NOT_NULL(ptr4);
-	mm_free(ptr4);
-
-	mm_free(ptr2);
-	mm_free(ptr3);
-	mm_free(ptr1);
-
-	ptr1 = mm_zalloc(32);
-	ptr2 = mm_zalloc(512);
-	ptr3 = mm_zalloc(128);
-	ptr4 = mm_zalloc(12);
-
-	mm_free(ptr2);
-
-	ptr2 = mm_zalloc(128);
-
-	mm_free(ptr3);
-	mm_free(ptr2);
-	mm_free(ptr4);
-	mm_free(ptr1);
 }
 
 TEST(memmgr, double_free)
