@@ -24,6 +24,8 @@
 #include "common/mockable.h"
 
 /* macros --------------------------------------------------------------------*/
+#define mm_allocator_update(this)	mm_allocator_set(this, __builtin_return_address(0))
+
 /* Public types --------------------------------------------------------------*/
 typedef void *		(* mm_alloc_f)			(uint32_t total_csize);
 typedef void *		(* mm_calloc_f)			(uint32_t n,
@@ -56,7 +58,8 @@ void			mm_check			(void);
 uint32_t		mm_nb_chunk			(void);
 void			mm_chunk_info			(mm_stats_t *stats,
 							 uint32_t size);
-void			mm_allocator_set		(void *ptr);
+void			mm_allocator_set		(void *ptr,
+							 void *lr);
 
 MOCKABLE mm_alloc_f	mm_alloc;
 MOCKABLE mm_alloc_f	mm_zalloc;

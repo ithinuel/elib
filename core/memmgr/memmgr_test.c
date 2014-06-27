@@ -41,24 +41,23 @@ TEST_GROUP(memmgr);
 
 TEST_GROUP_RUNNER(memmgr)
 {
-/*	RUN_TEST_CASE(memmgr, zalloc_free);
+	RUN_TEST_CASE(memmgr, zalloc_free);
 	RUN_TEST_CASE(memmgr, double_free);
 	RUN_TEST_CASE(memmgr, invalid_ptr);
 	RUN_TEST_CASE(memmgr, realloc_expand);
 	RUN_TEST_CASE(memmgr, realloc_shrink);
 	RUN_TEST_CASE(memmgr, infos);
-	RUN_TEST_CASE(memmgr, infos_with_invalid_params);*/
-	RUN_TEST_CASE(memmgr, rien);
+	RUN_TEST_CASE(memmgr, infos_with_invalid_params);
 }
 
 TEST_SETUP(memmgr)
 {
-//	mm_init();
+	mm_init();
 }
 
 TEST_TEAR_DOWN(memmgr)
 {
-//	mm_check();
+	mm_check();
 }
 
 /* Tests ---------------------------------------------------------------------*/
@@ -67,7 +66,6 @@ TEST(memmgr, rien)
 	TEST_FAIL();
 }
 
-#if 0
 TEST(memmgr, zalloc_free)
 {
 	void *ptr6 = NULL;
@@ -102,11 +100,8 @@ TEST(memmgr, zalloc_free)
 	TEST_ASSERT_NOT_NULL(ptr3);
 	ptr4 = mm_zalloc(22);
 	TEST_ASSERT_NOT_NULL(ptr4);
-	ptr5 = mm_zalloc(130984);
-	TEST_ASSERT_NOT_NULL(ptr5);
 	ptr6 = mm_zalloc(8);
 	TEST_ASSERT_NOT_NULL(ptr6);
-	TEST_ASSERT_NULL(mm_zalloc(1));
 
 	mm_free(ptr4);
 	mm_free(ptr5);
@@ -155,14 +150,14 @@ TEST(memmgr, invalid_ptr)
 {
 	uint8_t *ptr = NULL;
 
-	die_Expect("MM: not aligned chunk");
+	die_Expect("MM: alignment");
 	VERIFY_DIE_START
 	ptr = mm_zalloc(3);
 	mm_free(ptr+1);
 	VERIFY_DIE_END
 	die_Verify();
 
-	die_Expect("MM: out of bound");
+	/*die_Expect("MM: out of bound");
 	VERIFY_DIE_START
 	mm_free((void*)4);
 	VERIFY_DIE_END
@@ -172,7 +167,7 @@ TEST(memmgr, invalid_ptr)
 	VERIFY_DIE_START
 	mm_free((void*)0xFFFFFFFF0);
 	VERIFY_DIE_END
-	die_Verify();
+	die_Verify();*/
 
 	die_Expect("MM: xorsum");
 	VERIFY_DIE_START
@@ -186,7 +181,7 @@ TEST(memmgr, invalid_ptr)
 
 	mm_init();
 
-	die_Expect("MM: Overflowed");
+	die_Expect("MM: overflowed");
 	VERIFY_DIE_START
 	ptr = mm_zalloc(35);
 	eval_not_null_aligned_and_filled(ptr, 35, 0, "zalloc does not fill with 0");
@@ -257,7 +252,7 @@ TEST(memmgr, infos)
 	base += 1;
 
 	mm_stats_t *stats = mm_calloc(base, sizeof(mm_stats_t));
-	mm_allocator_set(stats);
+	mm_allocator_update(stats);
 	TEST_ASSERT_NOT_NULL(stats);
 	TEST_ASSERT_EQUAL_INT(base, mm_nb_chunk());
 
@@ -287,6 +282,5 @@ TEST(memmgr, infos_with_invalid_params)
 	TEST_ASSERT_EQUAL_UINT32(0, stats.total_csize);
 
 
-	mm_allocator_set(NULL);
+	mm_allocator_update(NULL);
 }
-#endif
