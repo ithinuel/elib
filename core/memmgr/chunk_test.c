@@ -78,12 +78,10 @@ static char *bool_to_string(bool val)
 
 static void eval_chunk_status(test_chunk_state_t *array, uint32_t array_len)
 {
-	//printf("\n");
 	mm_chunk_t *chnk = gs_chnk;
 	uint32_t i = 0;
 	for (i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
-		//printf("%p %5d %5s %5d\n", chnk, chnk->size, bool_to_string(chnk->allocated), chnk->guard_offset);
 		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->csize);
 		TEST_ASSERT_EQUAL_STRING(bool_to_string(array[i].allocated), bool_to_string(chnk->allocated));
 	}
@@ -124,6 +122,9 @@ TEST_GROUP_RUNNER(mm_chunk)
 {
 	RUN_TEST_GROUP(mm_chunk_validate);
 	
+	RUN_TEST_CASE(mm_chunk, next_get);
+	RUN_TEST_CASE(mm_chunk, prev_get);
+
 	/*
 	 * n : not allocated
 	 * . : null
@@ -160,6 +161,28 @@ TEST_TEAR_DOWN(mm_chunk)
 }
 
 /* Tests ---------------------------------------------------------------------*/
+TEST(mm_chunk, next_get)
+{
+	test_chunk_state_t a_state[] = {{128, true}, {128, true}};
+	prepare_chunk(a_state, 2);
+
+	mm_chunk_t *second = mm_compute_next(gs_chnk, gs_chnk->csize);
+
+	TEST_ASSERT_EQUAL_PTR(second, mm_chunk_next_get(gs_chnk));
+	TEST_ASSERT_NULL(mm_chunk_next_get(second));
+}
+
+TEST(mm_chunk, prev_get)
+{
+	test_chunk_state_t a_state[] = {{128, true}, {128, true}};
+	prepare_chunk(a_state, 2);
+
+	mm_chunk_t *second = mm_compute_next(gs_chnk, gs_chnk->csize);
+
+	TEST_ASSERT_EQUAL_PTR(gs_chnk, mm_chunk_prev_get(second));
+	TEST_ASSERT_NULL(mm_chunk_prev_get(gs_chnk));
+}
+
 TEST(mm_chunk, merge_alloc_null)
 {
 	test_chunk_state_t a_state[] = {{256, true}};

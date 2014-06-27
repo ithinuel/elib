@@ -75,6 +75,14 @@ mm_chunk_t *mm_chunk_next_get(mm_chunk_t *this)
 	return next;
 }
 
+mm_chunk_t *mm_chunk_prev_get(mm_chunk_t *this)
+{
+	if (this->prev_size == 0) {
+		return NULL;
+	} else {
+		return (mm_chunk_t *)((uintptr_t)this - this->prev_size*MM_CFG_ALIGNMENT);
+	}
+}
 uint32_t mm_guard_size(mm_chunk_t *this)
 {
 	return ((uint32_t)(this->csize - mm_header_csize()) * MM_CFG_ALIGNMENT) - this->guard_offset;
@@ -196,7 +204,7 @@ void *mm_toptr(mm_chunk_t *this)
 	return ptr + (sizeof(mm_chunk_t));
 }
 
-uint16_t mm_to_csize(uint32_t size)
+uint32_t mm_to_csize(uint32_t size)
 {
 	return ((size + (MM_CFG_ALIGNMENT-1))/MM_CFG_ALIGNMENT);
 }
@@ -211,8 +219,6 @@ uint16_t mm_header_csize(void)
 	return mm_to_csize(sizeof(mm_chunk_t));
 }
 
-#if 0
-
 mm_chunk_t *mm_tochunk(void *ptr)
 {
 	if (ptr == NULL) {
@@ -223,54 +229,3 @@ mm_chunk_t *mm_tochunk(void *ptr)
 	return chunk;
 }
 
-
-mm_chunk_t *mm_chunk_prev_get(mm_chunk_t *this)
-{
-	if (this->prev_size == 0) {
-		return NULL;
-	} else {
-		return (mm_chunk_t *)((uintptr_t)this - this->prev_size*MM_CFG_ALIGNMENT);
-	}
-}
-
-void mm_chunk_delete(mm_chunk_t *this)
-{
-	this->allocated = false;
-	this->allocator = 0;
-	mm_chunk_guard_set(this, 0);
-	this->xorsum = mm_chunk_xorsum(this);
-
-	mm_chunk_aggregate(this, false);
-}
-
-
-uint32_t mm_chunk_aggregate(mm_chunk_t *this, bool dry_run)
-{
-	mm_chunk_t *prev = mm_chunk_prev_get(this);
-	mm_chunk_t *next = mm_chunk_next_get(this);
-	uint32_t available_on_current = this->csize;
-	uint32_t tmp = 0;
-
-	if ((next != NULL) && !(next->allocated)) {
-		tmp = available_on_current + next->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-			if (!dry_run) {
-				mm_chunk_merge(this);
-			}
-		}
-	}
-	if ((prev != NULL) && !(prev->allocated)) {
-		tmp = available_on_current + prev->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-			if (!dry_run) {
-				mm_chunk_merge(prev);
-			}
-		}
-	}
-
-	return available_on_current;
-}
-
-#endif

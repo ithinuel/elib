@@ -45,7 +45,7 @@ void			mm_chunk_init		(mm_chunk_t *this,
 						 uint16_t csize);
 mm_chunk_t *		mm_compute_next		(mm_chunk_t *this,
 						 uint16_t csize);
-//mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
+mm_chunk_t *		mm_chunk_prev_get	(mm_chunk_t *this);
 mm_chunk_t *		mm_chunk_next_get	(mm_chunk_t *this);
 
 uint32_t		mm_guard_size		(mm_chunk_t *this);
@@ -59,19 +59,10 @@ void			mm_chunk_split		(mm_chunk_t *this,
 						 uint16_t csize);
 
 void *			mm_toptr		(mm_chunk_t *this);
+mm_chunk_t *		mm_tochunk		(void *ptr);
 
-uint16_t 		mm_to_csize		(uint32_t size);
+uint32_t 		mm_to_csize		(uint32_t size);
 uint16_t		mm_min_csize		(void);
 uint16_t		mm_header_csize		(void);
 
-#if 0
-void			mm_chunk_delete		(mm_chunk_t *this);
-
-mm_chunk_t *		mm_tochunk		(void *ptr);
-
-
-uint32_t		mm_chunk_aggregate	(mm_chunk_t *this,
-						 bool dry_run);
-
-#endif
 #endif
