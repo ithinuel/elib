@@ -34,6 +34,14 @@ typedef void *		(* mm_realloc_f)		(void *old_ptr,
 							 uint32_t total_csize);
 typedef void		(* mm_free_f)			(void *ptr);
 
+typedef struct
+{
+	uint32_t size;
+	uint16_t csize;
+	bool	 allocated;
+	void	 *allocator;
+} mm_info_t;
+
 
 /* Public functions ----------------------------------------------------------*/
 /**
@@ -48,12 +56,19 @@ void			mm_init				(uint8_t *heap,
  * Check heap integrity.
  */
 void			mm_check			(void);
+
 /**
  * Gives chunk number.
  * @return Integer.
  */
 void			mm_allocator_set		(void *ptr,
 							 void *lr);
+
+/**
+ * Returns a table of chunk informations. The last one has an invalid length of 0.
+ * @return	Table of mm_info_t.
+ */
+mm_info_t *		mm_info_get			(void);
 
 MOCKABLE mm_alloc_f	mm_alloc;
 MOCKABLE mm_alloc_f	mm_zalloc;

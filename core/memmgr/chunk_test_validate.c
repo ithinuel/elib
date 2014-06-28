@@ -22,7 +22,7 @@
 #include "unity_fixture.h"
 #include "common/common.h"
 #include "memmgr/chunk.h"
-#include "tests/tests.h"
+#include "tests/common_mock.h"
 
 #include "memmgr_conf.h"
 
@@ -31,8 +31,8 @@
 static void		eval_validate_xorsum			(void);
 
 /* variables */
-static uint8_t gs_raw[1024];
-static mm_chunk_t *gs_chnk __attribute__((aligned(MM_CFG_ALIGNMENT))) = (mm_chunk_t *)gs_raw;
+static uint8_t gs_raw[1024] __attribute__((aligned(MM_CFG_ALIGNMENT)));
+static mm_chunk_t *gs_chnk = (mm_chunk_t *)gs_raw;
 
 /* functions's definitions */
 static void eval_validate_xorsum(void)

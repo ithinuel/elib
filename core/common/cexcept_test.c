@@ -19,8 +19,8 @@
 #include "unity_fixture.h"
 #include "common/cexcept.h"
 
-#include "tests/tests.h"
-#include "tests/mock_memmgr.h"
+#include "tests/common_mock.h"
+#include "tests/memmgr_mock.h"
 
 /* Helper functions and variables --------------------------------------------*/
 static bool did_try_start = false;

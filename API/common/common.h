@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include <stdbool.h>
 
 /* Macros --------------------------------------------------------------------*/
 #define		base_of(ptr, type) \
@@ -30,6 +31,7 @@
  */
 uint32_t		umin			(uint32_t a,
 						 uint32_t b);
+char *			bool_to_string		(bool val);
 void			die			(const char *reason);
 
 #endif

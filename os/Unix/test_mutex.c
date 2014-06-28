@@ -16,7 +16,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "unity_fixture.h"
-#include "tests/mock_memmgr.h"
+#include "tests/memmgr_mock.h"
 #include "os/memmgr.h"
 #include "os/mutex.h"
 

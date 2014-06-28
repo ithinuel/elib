@@ -14,23 +14,19 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_TESTS_H__
-#define __TESTS_TESTS_H__
+#ifndef __TESTS_CHUNK_MOCK_H__
+#define __TESTS_CHUNK_MOCK_H__
 
-/* Includes ------------------------------------------------------------------*/
-#include <setjmp.h>
 #include <stdint.h>
+#include "memmgr/chunk.h"
 
-#define VERIFY_DIE_START \
-	if (setjmp(g_on_die)==0) {
-#define VERIFY_DIE_END \
-	}
-
-/* Public functions ----------------------------------------------------------*/
-void				die_Expect			(char *expected_cause);
-void				die_Verify			(void);
-
-/* Public variables ----------------------------------------------------------*/
-extern jmp_buf g_on_die;
+void		mock_chunk_setup			(void);
+void		mock_chunk_verify			(void);
+void		mock_mm_find_first_free_ExpectAndReturn	(uint16_t wanted_csize,
+							 mm_chunk_t *ret);
+void		mock_mm_chunk_split_ExpectAndReturn	(mm_chunk_t *this,
+							 uint16_t csize,
+							 bool do_ret);
+void		mock_mm_chunk_merge_Expect		(mm_chunk_t *this);
 
 #endif

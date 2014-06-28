@@ -14,17 +14,9 @@
 	limitations under the License.
 */
 
+#ifndef __TESTS_MEMMGR_MOCK_H__
+#define __TESTS_MEMMGR_MOCK_H__
 
-/* Includes ------------------------------------------------------------------*/
-#include "common/common.h"
+void mock_memmgr_setup(void);
 
-/* Public functions ----------------------------------------------------------*/
-uint32_t umin(uint32_t a, uint32_t b)
-{
-	return (a<b)? a : b;
-}
-
-char *bool_to_string(bool val)
-{
-	return val?"true":"false";
-}
+#endif

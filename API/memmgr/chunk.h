@@ -20,6 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
 
+#include "common/mockable.h"
+
 /* Macro definitions ---------------------------------------------------------*/
 #define UINT15_MAX		(32767)
 
@@ -40,11 +42,15 @@ typedef struct
 typedef struct
 {
 	uint32_t	size;
-	uint16_t	total_csize;
+	uint16_t	csize;
 	bool		allocated;
 	void *		allocator;
-} mm_info_t;
+} mm_cinfo_t;
 
+typedef mm_chunk_t *	(*mm_find_first_free_f)		(uint16_t wanted_csize);
+typedef void		(*mm_chunk_merge_f)		(mm_chunk_t *this);
+typedef mm_chunk_t *	(*mm_chunk_split_f)		(mm_chunk_t *this,
+						 	 uint16_t csize);
 
 /* Functions prototypes ------------------------------------------------------*/
 void			mm_chunk_boundary_set	(mm_chunk_t *first,
@@ -64,19 +70,23 @@ void			mm_chunk_guard_set	(mm_chunk_t *this,
 						 uint32_t offset);
 uint16_t		mm_chunk_xorsum		(mm_chunk_t *this);
 void			mm_chunk_validate	(mm_chunk_t *this);
-void			mm_chunk_merge		(mm_chunk_t *this);
-mm_chunk_t *		mm_chunk_split		(mm_chunk_t *this,
-						 uint16_t csize);
+MOCKABLE mm_chunk_merge_f mm_chunk_merge;
+MOCKABLE mm_chunk_split_f mm_chunk_split;
 
 void *			mm_toptr		(mm_chunk_t *this);
 mm_chunk_t *		mm_tochunk		(void *ptr);
 
-mm_chunk_t *		mm_find_first_free	(uint16_t wanted_csize);
+MOCKABLE mm_find_first_free_f mm_find_first_free;
 uint32_t		mm_chunk_count		(void);
-void			mm_chunk_info		(mm_info_t *infos,
+void			mm_chunk_info		(mm_cinfo_t *infos,
 						 uint32_t size);
 
-uint32_t 		mm_to_csize		(uint32_t size);
+/**
+ * Convert data size in byte to chunk size in alignment unit including the envelop.
+ * @param	size	Data Size in byte.
+ * @return	chunk size or -1 if size is too big.
+ */
+int32_t 		mm_to_csize		(uint32_t size);
 uint16_t		mm_min_csize		(void);
 uint16_t		mm_header_csize		(void);
 

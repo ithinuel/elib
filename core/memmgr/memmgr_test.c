@@ -20,114 +20,168 @@
 #include <stdlib.h>
 
 #include "unity_fixture.h"
-#include "tests/tests.h"
+#include "tests/common_mock.h"
+#include "tests/chunk_mock.h"
+#include "tests/chunk_test_tools.h"
 #include "memmgr/chunk.h"
 #include "os/memmgr.h"
 #include "memmgr_conf.h"
 
-/* helper functions ----------------------------------------------------------*/
-typedef struct
-{
-	uint16_t size;
-	bool	 allocated;
-} test_mem_state_t;
+/* helpers -------------------------------------------------------------------*/
+#define			DEFAULT_SIZE		(11)
 
+static void *		mock_alloc		(uint32_t size);
+static void		mock_alloc_Expect	(uint32_t size, void *ret);
+static void *		mock_zalloc		(uint32_t size);
+static void		mock_alloc_Setup	(void);
+static void		mock_zalloc_Setup	(void);
+static void		mock_Verify		(void);
+
+static struct
+{
+	bool	 expect_call;
+	uint32_t expect_size;
+	void	 *then_return;
+} gs_mock_alloc;
+static struct
+{
+	bool	 expect_call;
+	uint32_t expect_size;
+	void	 *then_return;
+} gs_mock_zalloc;
+
+static void *mock_alloc(uint32_t size)
+{
+	TEST_ASSERT_MESSAGE(gs_mock_alloc.expect_call, "Unexpected call to mock_alloc");
+	TEST_ASSERT_EQUAL_UINT32(gs_mock_alloc.expect_size, size);
+	gs_mock_alloc.expect_call = false;
+	return gs_mock_alloc.then_return;
+}
+
+static void *mock_zalloc(uint32_t size)
+{
+	TEST_ASSERT_MESSAGE(gs_mock_zalloc.expect_call, "Unexpected call to mock_zalloc");
+	TEST_ASSERT_EQUAL_UINT32(gs_mock_zalloc.expect_size, size);
+	gs_mock_zalloc.expect_call = false;
+	return gs_mock_zalloc.then_return;
+}
+
+static void mock_alloc_Expect(uint32_t size, void *ret)
+{
+	gs_mock_alloc.expect_call = true;
+	gs_mock_alloc.expect_size = size;
+	gs_mock_alloc.then_return = ret;
+}
+
+static void mock_zalloc_Expect(uint32_t size, void *ret)
+{
+	gs_mock_zalloc.expect_call = true;
+	gs_mock_zalloc.expect_size = size;
+	gs_mock_zalloc.then_return = ret;
+}
+
+static void mock_alloc_Setup(void)
+{
+	UT_PTR_SET(mm_alloc, mock_alloc);
+	gs_mock_alloc.expect_call = false;
+}
+
+static void mock_zalloc_Setup(void)
+{
+	UT_PTR_SET(mm_zalloc, mock_zalloc);
+	gs_mock_zalloc.expect_call = false;
+}
+
+static void mock_Verify(void)
+{
+	TEST_ASSERT_FALSE_MESSAGE(gs_mock_alloc.expect_call, "Missing call to mm_alloc");
+	TEST_ASSERT_FALSE_MESSAGE(gs_mock_zalloc.expect_call, "Missing call to mm_zalloc");
+}
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr);
 
 TEST_GROUP_RUNNER(memmgr)
 {
-	RUN_TEST_CASE(memmgr, _alloc);
+	RUN_TEST_GROUP(memmgr_alloc);
+	RUN_TEST_GROUP(memmgr_free);
+
+	RUN_TEST_CASE(memmgr, allocator_set);
+	RUN_TEST_CASE(memmgr, allocator_set_null_does_not_hurt);
+
 	RUN_TEST_CASE(memmgr, _zalloc);
+	RUN_TEST_CASE(memmgr, zalloc_alloc_failed);
+
 	RUN_TEST_CASE(memmgr, _calloc);
-	RUN_TEST_CASE(memmgr, _free);
-	
-	RUN_TEST_CASE(memmgr, alloc_zero);
-	RUN_TEST_CASE(memmgr, alloc_no_available_chunk);
-	RUN_TEST_CASE(memmgr, alloc_far_too_big);
-	RUN_TEST_CASE(memmgr, alloc_cant_split);
-	RUN_TEST_CASE(memmgr, alloc_cant_merge_allocated);
-	RUN_TEST_CASE(memmgr, alloc_cant_merge_last);
-	
-	RUN_TEST_CASE(memmgr, free_cant_refree);
+	RUN_TEST_CASE(memmgr, calloc_zalloc_failed);
 }
 
 TEST_SETUP(memmgr)
 {
-	mm_init(gs_raw_small, 1024);
+	chunk_test_state_t a_state[] = {{128, false}, {128, false}};
+	chunk_test_prepare(a_state, 2);
 }
 
 TEST_TEAR_DOWN(memmgr)
 {
-	mm_check();
+	chunk_test_clear();
+	mock_Verify();
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(memmgr, _alloc)
+TEST(memmgr, allocator_set)
 {
-	TEST_ASSERT_NOT_NULL(mm_alloc(12));
+	void *ptr = mm_alloc(DEFAULT_SIZE);
+	void *lr = __builtin_return_address(0);
+	mm_chunk_t *chnk = mm_tochunk(ptr);
+
+	mm_allocator_set(ptr, lr);
+
+	mm_chunk_validate(chnk);
+	TEST_ASSERT_EQUAL_PTR(lr, chnk->allocator);
+
+	mm_allocator_set(ptr, NULL);
+	mm_chunk_validate(chnk);
+	TEST_ASSERT_EQUAL_PTR(NULL, chnk->allocator);
+}
+
+TEST(memmgr, allocator_set_null_does_not_hurt)
+{
+	mm_allocator_set(NULL, NULL);
 }
 
 TEST(memmgr, _zalloc)
 {
-	
-	uint8_t a_zero[12];
-	memset(a_zero, 0, 12);
-	
-	uint8_t *ptr = mm_zalloc(12);
-	TEST_ASSERT_EQUAL_MEMORY(a_zero, ptr, 12);
+	uint8_t *ptr = mm_alloc(DEFAULT_SIZE);
+
+	mock_alloc_Setup();
+	mock_alloc_Expect(DEFAULT_SIZE, ptr);
+	TEST_ASSERT_EQUAL_PTR(ptr, mm_zalloc(DEFAULT_SIZE));
+	for (int32_t i = 0; i < DEFAULT_SIZE; i++) {
+		TEST_ASSERT_EQUAL_UINT8(0, ptr[i]);
+	}
 }
+
+TEST(memmgr, zalloc_alloc_failed)
+{
+	mock_alloc_Setup();
+	mock_alloc_Expect(DEFAULT_SIZE, NULL);
+	TEST_ASSERT_NULL(mm_zalloc(DEFAULT_SIZE));
+}
+
 
 TEST(memmgr, _calloc)
 {
-	uint32_t a_zero[12];
-	memset(a_zero, 0, 12*sizeof(uint32_t));
-	
-	uint8_t *ptr = mm_calloc(12, sizeof(uint32_t));
-	TEST_ASSERT_EQUAL_MEMORY(a_zero, ptr, 12*sizeof(uint32_t));
+	void *ptr = mm_zalloc(DEFAULT_SIZE*sizeof(uint32_t));
+
+	mock_zalloc_Setup();
+	mock_zalloc_Expect(DEFAULT_SIZE*sizeof(uint32_t), ptr);
+	TEST_ASSERT_EQUAL_PTR(ptr, mm_calloc(DEFAULT_SIZE, sizeof(uint32_t)));
 }
 
-TEST(memmgr, _free)
+TEST(memmgr, calloc_zalloc_failed)
 {
-	uint8_t *ptr = mm_alloc(12);
-	memset(ptr, 'A', 12);
-	mm_free(ptr);
+	mock_zalloc_Setup();
+	mock_zalloc_Expect(DEFAULT_SIZE*sizeof(uint32_t), NULL);
+	TEST_ASSERT_NULL(mm_calloc(DEFAULT_SIZE, sizeof(uint32_t)));
 }
-	
-TEST(memmgr, alloc_zero)
-{
-	TEST_ASSERT_NULL(mm_alloc(0));
-}
-
-TEST(memmgr, alloc_no_available_chunk)
-{
-	mm_alloc(512);
-	TEST_ASSERT_NULL(mm_alloc(784));
-}
-
-TEST(memmgr, alloc_far_too_big)
-{
-	TEST_ASSERT_NULL(mm_alloc(2*1024));
-}
-
-TEST(memmgr, alloc_cant_split)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr, alloc_cant_merge_allocated)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr, alloc_cant_merge_last)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr, free_cant_refree)
-{
-	TEST_FAIL();
-}
-

@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include "unity_fixture.h"
 
-#include "tests/tests.h"
+#include "tests/common_mock.h"
 
 jmp_buf g_on_die;
 static char *gs_expected_cause = NULL;

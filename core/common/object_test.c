@@ -19,7 +19,7 @@
 #include "unity_fixture.h"
 #include "common/object.h"
 #include "os/memmgr.h"
-#include "tests/mock_memmgr.h"
+#include "tests/memmgr_mock.h"
 
 /* Test helpers --------------------------------------------------------------*/
 /* functions's declarations */

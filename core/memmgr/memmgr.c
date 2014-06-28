@@ -35,7 +35,6 @@ typedef struct
 } mm_heap_t;
 
 /* Prototypes ----------------------------------------------------------------*/
-static int32_t			mm_wanted_csize		(uint32_t size);
 static void			mm_lock			(void);
 static void			mm_unlock		(void);
 
@@ -57,17 +56,6 @@ MOCKABLE mm_realloc_f	mm_realloc = mm_realloc_impl;
 MOCKABLE mm_free_f	mm_free = mm_free_impl;
 
 /* Private Functions definitions ---------------------------------------------*/
-static int32_t mm_wanted_csize(uint32_t size)
-{
-	int32_t wanted_csize = mm_to_csize(size);
-	wanted_csize += mm_header_csize() + MM_CFG_GUARD_SIZE;
-
-	if (wanted_csize > UINT15_MAX) {
-		return -1;
-	}
-	return wanted_csize;
-}
-
 static void mm_lock(void)
 {
 	if (gs_memmgr.mtx != NULL) {
@@ -91,7 +79,7 @@ static void *mm_alloc_impl(uint32_t size)
 		return NULL;
 	}
 
-	wanted_csize = mm_wanted_csize(size);
+	wanted_csize = mm_to_csize(size);
 	if (wanted_csize < 0) {
 		return NULL;
 	}
@@ -120,7 +108,7 @@ static void *mm_alloc_impl(uint32_t size)
 static void *mm_zalloc_impl(uint32_t size)
 {
 	mm_lock();
-	void *ptr = mm_alloc_impl(size);
+	void *ptr = mm_alloc(size);
 	if (ptr != NULL) {
 		memset(ptr, 0, size);
 		mm_allocator_update(ptr);
@@ -132,7 +120,7 @@ static void *mm_zalloc_impl(uint32_t size)
 static void *mm_calloc_impl(uint32_t n, uint32_t size)
 {
 	mm_lock();
-	void *ptr = mm_zalloc_impl(n * size);
+	void *ptr = mm_zalloc(n * size);
 	if (ptr != NULL) {
 		mm_allocator_update(ptr);
 	}
@@ -142,86 +130,87 @@ static void *mm_calloc_impl(uint32_t n, uint32_t size)
 
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
-	int32_t wanted_csize = 0;
-	uint32_t available_on_current = 0;
-	uint32_t tmp = 0;
-	bool eat_next = false;
-	bool eat_prev = false;
-	
-	mm_chunk_t *chnk = NULL;
-	mm_chunk_t *next = NULL;
-	mm_chunk_t *prev = NULL;
-	void *new_ptr = NULL;
-
-	if (size == 0) {
-		mm_free_impl(old_ptr);
-		return NULL;
-	}
-
-	wanted_csize = mm_wanted_csize(size);
-	if (wanted_csize < 0) {
-		return NULL;
-	}
-
-	if (old_ptr == NULL) {
-		return mm_alloc_impl(size);
-	}
-
-	mm_lock();
-	chnk = mm_tochunk(old_ptr);
-	available_on_current = chnk->csize;
-	next = mm_chunk_next_get(chnk);
-	if ((next != NULL) && !next->allocated) {
-		tmp = available_on_current + next->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-			eat_next = true;
-		}
-	}
-	prev = mm_chunk_prev_get(chnk);
-	if ((prev != NULL) && !prev->allocated) {
-		tmp = available_on_current + prev->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-			eat_prev = true;
-		}
-	}
-
-	if (available_on_current >= wanted_csize) {
-		/* we're ok to merge & shrink this chunk*/
-		if (eat_next) {
-			mm_chunk_merge(chnk);
-		}
-		if (eat_prev) {
-			mm_chunk_merge(prev);
-			chnk = prev;
-		}
-		
-		mm_chunk_guard_set(chnk, size);
-		chnk->xorsum = mm_chunk_xorsum(chnk);
-
-		mm_chunk_split(chnk, wanted_csize);
-		new_ptr = mm_toptr(chnk);
-	} else {
-		new_ptr = mm_alloc_impl(size);
-		if (new_ptr != NULL) {
-			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
-		}
-		chnk = mm_tochunk(new_ptr);
-		mm_free_impl(old_ptr);
-	}
-
-	chnk->allocator = __builtin_return_address(1);
-	chnk->xorsum = mm_chunk_xorsum(chnk);
-	mm_unlock();
-	return new_ptr;
+//	int32_t wanted_csize = 0;
+//	uint32_t available_on_current = 0;
+//	uint32_t tmp = 0;
+//	bool eat_next = false;
+//	bool eat_prev = false;
+//
+//	mm_chunk_t *chnk = NULL;
+//	mm_chunk_t *next = NULL;
+//	mm_chunk_t *prev = NULL;
+//	void *new_ptr = NULL;
+//
+//	if (size == 0) {
+//		mm_free_impl(old_ptr);
+//		return NULL;
+//	}
+//
+//	wanted_csize = mm_to_csize(size);
+//	if (wanted_csize < 0) {
+//		return NULL;
+//	}
+//
+//	if (old_ptr == NULL) {
+//		return mm_alloc_impl(size);
+//	}
+//
+//	mm_lock();
+//	chnk = mm_tochunk(old_ptr);
+//	available_on_current = chnk->csize;
+//	next = mm_chunk_next_get(chnk);
+//	if ((next != NULL) && !next->allocated) {
+//		tmp = available_on_current + next->csize;
+//		if (tmp <= UINT15_MAX) {
+//			available_on_current = tmp;
+//			eat_next = true;
+//		}
+//	}
+//	prev = mm_chunk_prev_get(chnk);
+//	if ((prev != NULL) && !prev->allocated) {
+//		tmp = available_on_current + prev->csize;
+//		if (tmp <= UINT15_MAX) {
+//			available_on_current = tmp;
+//			eat_prev = true;
+//		}
+//	}
+//
+//	if (available_on_current >= wanted_csize) {
+//		/* we're ok to merge & shrink this chunk*/
+//		if (eat_next) {
+//			mm_chunk_merge(chnk);
+//		}
+//		if (eat_prev) {
+//			mm_chunk_merge(prev);
+//			chnk = prev;
+//		}
+//
+//		mm_chunk_guard_set(chnk, size);
+//		chnk->xorsum = mm_chunk_xorsum(chnk);
+//
+//		mm_chunk_split(chnk, wanted_csize);
+//		new_ptr = mm_toptr(chnk);
+//	} else {
+//		new_ptr = mm_alloc_impl(size);
+//		if (new_ptr != NULL) {
+//			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
+//		}
+//		chnk = mm_tochunk(new_ptr);
+//		mm_free_impl(old_ptr);
+//	}
+//
+//	chnk->allocator = __builtin_return_address(1);
+//	chnk->xorsum = mm_chunk_xorsum(chnk);
+//	mm_unlock();
+//	return new_ptr;
+	return NULL;
 }
 
 static void mm_free_impl(void *ptr)
 {
 	mm_lock();
-	mm_chunk_t *chnk = mm_tochunk(ptr);
-	if (chnk != NULL) {
+	if (ptr != NULL) {
+		mm_chunk_t *chnk = mm_tochunk(ptr);
 		if (!chnk->allocated) {
 			die("MM: double free");
 		}
@@ -230,53 +219,53 @@ static void mm_free_impl(void *ptr)
 		chnk->allocator = NULL;
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
-		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
-		if ((sibbling != NULL) && !sibbling->allocated) {
-			mm_chunk_merge(chnk);
-		}
-		sibbling = mm_chunk_prev_get(chnk);
-		if ((sibbling != NULL) && !sibbling->allocated) {
-			mm_chunk_merge(sibbling);
-		}
+//		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
+//		if ((sibbling != NULL) && !sibbling->allocated) {
+//			mm_chunk_merge(chnk);
+//		}
+//		sibbling = mm_chunk_prev_get(chnk);
+//		if ((sibbling != NULL) && !sibbling->allocated) {
+//			mm_chunk_merge(sibbling);
+//		}
 	}
 	mm_unlock();
 }
 
 /* Functions definitions -----------------------------------------------------*/
-void mm_init(uint8_t *heap, uint32_t size)
-{
-	gs_memmgr.heap = heap;
-	mm_chunk_t *chnk = (mm_chunk_t *)heap;
-
-	uint32_t count = 0;
-	mm_chunk_t *first = chnk;
-	mm_chunk_t *prev = NULL;
-	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
-
-	while (heap_size >= mm_min_csize()) {
-		uint16_t size = umin(heap_size, UINT15_MAX);
-		heap_size -= size;
-
-		mm_chunk_init(chnk, prev, size);
-		count++;
-
-		prev = chnk;
-		chnk = mm_compute_next(chnk, chnk->csize);
-	}
-	mm_chunk_boundary_set(first, prev, count);
-	gs_memmgr.mtx = mutex_new(false, "memmgr");
-}
-
-void mm_check(void)
-{
-	mm_lock();
-	mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
-	mm_chunk_validate(chnk);
-	while (chnk != NULL) {
-		chnk = mm_chunk_next_get(chnk);
-	}
-	mm_unlock();
-}
+//void mm_init(uint8_t *heap, uint32_t size)
+//{
+//	gs_memmgr.heap = heap;
+//	mm_chunk_t *chnk = (mm_chunk_t *)heap;
+//
+//	uint32_t count = 0;
+//	mm_chunk_t *first = chnk;
+//	mm_chunk_t *prev = NULL;
+//	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
+//
+//	while (heap_size >= mm_min_csize()) {
+//		uint16_t size = umin(heap_size, UINT15_MAX);
+//		heap_size -= size;
+//
+//		mm_chunk_init(chnk, prev, size);
+//		count++;
+//
+//		prev = chnk;
+//		chnk = mm_compute_next(chnk, chnk->csize);
+//	}
+//	mm_chunk_boundary_set(first, prev, count);
+//	gs_memmgr.mtx = mutex_new(false, "memmgr");
+//}
+//
+//void mm_check(void)
+//{
+//	mm_lock();
+//	mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
+//	mm_chunk_validate(chnk);
+//	while (chnk != NULL) {
+//		chnk = mm_chunk_next_get(chnk);
+//	}
+//	mm_unlock();
+//}
 
 void mm_allocator_set(void *ptr, void *lr)
 {
@@ -288,3 +277,26 @@ void mm_allocator_set(void *ptr, void *lr)
 	}
 	mm_unlock();
 }
+
+//mm_info_t *mm_info_get(void)
+//{
+//	mm_lock();
+//	mm_info_t *infos = mm_calloc(mm_chunk_count() + 2, sizeof(mm_info_t));
+//	if (infos != NULL) {
+//		mm_info_t *it = infos;
+//		mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
+//		mm_chunk_validate(chnk);
+//		while (chnk != NULL) {
+//			it->allocated = chnk->allocated;
+//			it->allocator = chnk->allocator;
+//			it->csize = chnk->csize;
+//			it->size = chnk->guard_offset;
+//
+//			it++;
+//			chnk = mm_chunk_next_get(chnk);
+//		}
+//	}
+//	mm_unlock();
+//	return infos;
+//}
+
