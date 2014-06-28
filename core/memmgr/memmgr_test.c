@@ -37,6 +37,7 @@ static void		mock_alloc_Setup	(void);
 static void		mock_zalloc_Setup	(void);
 static void		mock_Verify		(void);
 
+static uint8_t gs_heap[1024*1024];
 static struct
 {
 	bool	 expect_call;
@@ -114,6 +115,9 @@ TEST_GROUP_RUNNER(memmgr)
 
 	RUN_TEST_CASE(memmgr, _calloc);
 	RUN_TEST_CASE(memmgr, calloc_zalloc_failed);
+
+	RUN_TEST_CASE(memmgr, init);
+	RUN_TEST_CASE(memmgr, check);
 }
 
 TEST_SETUP(memmgr)
@@ -184,4 +188,24 @@ TEST(memmgr, calloc_zalloc_failed)
 	mock_zalloc_Setup();
 	mock_zalloc_Expect(DEFAULT_SIZE*sizeof(uint32_t), NULL);
 	TEST_ASSERT_NULL(mm_calloc(DEFAULT_SIZE, sizeof(uint32_t)));
+}
+
+TEST(memmgr, init)
+{
+	chunk_test_state_t a_expect[] = {
+			{9, true}, {UINT15_MAX-9, false},
+			{UINT15_MAX, false}, {UINT15_MAX, false},
+			{UINT15_MAX, false}, {UINT15_MAX, false},
+			{UINT15_MAX, false}, {UINT15_MAX, false},
+			{UINT15_MAX, false}, {8, false}};
+	UT_PTR_SET(g_first, gs_heap);
+
+	mm_init(gs_heap, 1024*1024);
+	chunk_test_verify(a_expect, 10);
+}
+
+TEST(memmgr, check)
+{
+	mm_init(gs_heap, 1024*1024);
+	mm_check();
 }

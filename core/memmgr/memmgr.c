@@ -219,53 +219,53 @@ static void mm_free_impl(void *ptr)
 		chnk->allocator = NULL;
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
-//		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
-//		if ((sibbling != NULL) && !sibbling->allocated) {
-//			mm_chunk_merge(chnk);
-//		}
-//		sibbling = mm_chunk_prev_get(chnk);
-//		if ((sibbling != NULL) && !sibbling->allocated) {
-//			mm_chunk_merge(sibbling);
-//		}
+		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
+		if ((sibbling != NULL) && !sibbling->allocated) {
+			mm_chunk_merge(chnk);
+		}
+		sibbling = mm_chunk_prev_get(chnk);
+		if ((sibbling != NULL) && !sibbling->allocated) {
+			mm_chunk_merge(sibbling);
+		}
 	}
 	mm_unlock();
 }
 
 /* Functions definitions -----------------------------------------------------*/
-//void mm_init(uint8_t *heap, uint32_t size)
-//{
-//	gs_memmgr.heap = heap;
-//	mm_chunk_t *chnk = (mm_chunk_t *)heap;
-//
-//	uint32_t count = 0;
-//	mm_chunk_t *first = chnk;
-//	mm_chunk_t *prev = NULL;
-//	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
-//
-//	while (heap_size >= mm_min_csize()) {
-//		uint16_t size = umin(heap_size, UINT15_MAX);
-//		heap_size -= size;
-//
-//		mm_chunk_init(chnk, prev, size);
-//		count++;
-//
-//		prev = chnk;
-//		chnk = mm_compute_next(chnk, chnk->csize);
-//	}
-//	mm_chunk_boundary_set(first, prev, count);
-//	gs_memmgr.mtx = mutex_new(false, "memmgr");
-//}
-//
-//void mm_check(void)
-//{
-//	mm_lock();
-//	mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
-//	mm_chunk_validate(chnk);
-//	while (chnk != NULL) {
-//		chnk = mm_chunk_next_get(chnk);
-//	}
-//	mm_unlock();
-//}
+void mm_init(uint8_t *heap, uint32_t size)
+{
+	gs_memmgr.heap = heap;
+	mm_chunk_t *chnk = (mm_chunk_t *)heap;
+
+	uint32_t count = 0;
+	mm_chunk_t *first = chnk;
+	mm_chunk_t *prev = NULL;
+	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
+
+	while (heap_size >= mm_min_csize()) {
+		uint16_t size = umin(heap_size, UINT15_MAX);
+		heap_size -= size;
+
+		mm_chunk_init(chnk, prev, size);
+		count++;
+
+		prev = chnk;
+		chnk = mm_compute_next(chnk, chnk->csize);
+	}
+	mm_chunk_boundary_set(first, prev, count);
+	gs_memmgr.mtx = mutex_new(false, "memmgr");
+}
+
+void mm_check(void)
+{
+	mm_lock();
+	mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
+	mm_chunk_validate(chnk);
+	while (chnk != NULL) {
+		chnk = mm_chunk_next_get(chnk);
+	}
+	mm_unlock();
+}
 
 void mm_allocator_set(void *ptr, void *lr)
 {

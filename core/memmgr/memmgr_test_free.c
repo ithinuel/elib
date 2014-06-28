@@ -28,7 +28,6 @@
 #include "memmgr_conf.h"
 
 /* helpers -------------------------------------------------------------------*/
-void *gs_ptr = NULL;
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr_free);
@@ -36,20 +35,18 @@ TEST_GROUP(memmgr_free);
 TEST_GROUP_RUNNER(memmgr_free)
 {
 	RUN_TEST_CASE(memmgr_free, free_null_does_no_harm);
-	RUN_TEST_CASE(memmgr_free, free_);
+	RUN_TEST_CASE(memmgr_free, free_cant_merge_prev_if_null);;
+	RUN_TEST_CASE(memmgr_free, free_cant_merge_next_if_null);
+	RUN_TEST_CASE(memmgr_free, free_cant_merge_next_if_allocated);
+	RUN_TEST_CASE(memmgr_free, free_cant_merge_prev_if_allocated);
 	RUN_TEST_CASE(memmgr_free, double_free_leads_to_death);
-	RUN_TEST_CASE(memmgr_free, free_can_merge_next_if_null);
-	RUN_TEST_CASE(memmgr_free, free_can_merge_next_if_allocated);
-	RUN_TEST_CASE(memmgr_free, free_can_merge_prev_if_null);
-	RUN_TEST_CASE(memmgr_free, free_can_merge_prev_if_allocated);
+	RUN_TEST_CASE(memmgr_free, free_);
 }
 
 TEST_SETUP(memmgr_free)
 {
 	chunk_test_state_t a_state[] = {{128, false}, {128, false}};
 	chunk_test_prepare(a_state, 2);
-
-	gs_ptr = mm_alloc(11);
 
 	mock_chunk_setup();
 }
@@ -66,44 +63,74 @@ TEST(memmgr_free, free_null_does_no_harm)
 	mm_free(NULL);
 }
 
+TEST(memmgr_free, free_cant_merge_prev_if_null)
+{
+	chunk_test_state_t a_expect[] = {{256, false}};
+	chunk_test_allocated_set(g_first, true);
+	mock_mm_chunk_merge_Expect(g_first);
+
+	mm_free(mm_toptr(g_first));
+	chunk_test_verify(a_expect, 1);
+}
+
+TEST(memmgr_free, free_cant_merge_next_if_null)
+{
+	chunk_test_state_t a_expect[] = {{256, false}};
+	mm_chunk_t *second = mm_chunk_next_get(g_first);
+	chunk_test_allocated_set(second, true);
+	mock_mm_chunk_merge_Expect(g_first);
+
+	mm_free(mm_toptr(second));
+	chunk_test_verify(a_expect, 1);
+}
+
+TEST(memmgr_free, free_cant_merge_next_if_allocated)
+{
+	chunk_test_state_t a_expect[] = {{128, false}, {128, true}};
+	mm_chunk_t *second = mm_chunk_next_get(g_first);
+
+	chunk_test_allocated_set(g_first, true);
+	chunk_test_allocated_set(second, true);
+
+	mm_free(mm_toptr(g_first));
+	chunk_test_verify(a_expect, 2);
+}
+
+TEST(memmgr_free, free_cant_merge_prev_if_allocated)
+{
+	chunk_test_state_t a_expect[] = {{128, true}, {128, false}};
+	mm_chunk_t *second = mm_chunk_next_get(g_first);
+
+	chunk_test_allocated_set(g_first, true);
+	chunk_test_allocated_set(second, true);
+
+	mm_free(mm_toptr(second));
+	chunk_test_verify(a_expect, 2);
+}
+
 TEST(memmgr_free, free_)
 {
-	mm_chunk_t *chnk = mm_tochunk(gs_ptr);
-	mm_free(gs_ptr);
-	mm_chunk_validate(chnk);
-	TEST_ASSERT_FALSE(chnk->allocated);
+	chunk_test_allocated_set(g_first, true);
+	mock_mm_chunk_merge_Expect(g_first);
+	void *ptr = mm_toptr(g_first);
+	mm_free(ptr);
+	mm_chunk_validate(g_first);
+	TEST_ASSERT_FALSE(g_first->allocated);
 }
 
 TEST(memmgr_free, double_free_leads_to_death)
 {
-	mm_chunk_t *chnk = mm_tochunk(gs_ptr);
-	mm_free(gs_ptr);
-	mm_chunk_validate(chnk);
-	TEST_ASSERT_FALSE(chnk->allocated);
+	chunk_test_allocated_set(g_first, true);
+	mock_mm_chunk_merge_Expect(g_first);
+
+	void *ptr = mm_toptr(g_first);
+	mm_free(ptr);
+	mm_chunk_validate(g_first);
+	TEST_ASSERT_FALSE(g_first->allocated);
 
 	die_Expect("MM: double free");
 	VERIFY_DIE_START
-	mm_free(gs_ptr);
+	mm_free(ptr);
 	VERIFY_DIE_END
 	die_Verify();
-}
-
-TEST(memmgr_free, free_can_merge_next_if_null)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr_free, free_can_merge_next_if_allocated)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr_free, free_can_merge_prev_if_null)
-{
-	TEST_FAIL();
-}
-
-TEST(memmgr_free, free_can_merge_prev_if_allocated)
-{
-	TEST_FAIL();
 }
