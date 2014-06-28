@@ -22,6 +22,7 @@ CORE_SRCS = \
 	$(CORE_DIR)/memmgr/memmgr_test.c \
 	$(CORE_DIR)/memmgr/memmgr_test_alloc.c \
 	$(CORE_DIR)/memmgr/memmgr_test_free.c \
+	$(CORE_DIR)/memmgr/memmgr_test_realloc.c \
 	$(CORE_DIR)/memmgr/chunk.c \
 	$(CORE_DIR)/memmgr/chunk_mock.c \
 	$(CORE_DIR)/memmgr/chunk_test.c \

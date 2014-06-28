@@ -106,6 +106,7 @@ TEST_GROUP_RUNNER(memmgr)
 {
 	RUN_TEST_GROUP(memmgr_alloc);
 	RUN_TEST_GROUP(memmgr_free);
+	RUN_TEST_GROUP(memmgr_realloc);
 
 	RUN_TEST_CASE(memmgr, allocator_set);
 	RUN_TEST_CASE(memmgr, allocator_set_null_does_not_hurt);

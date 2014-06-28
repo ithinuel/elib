@@ -130,32 +130,34 @@ static void *mm_calloc_impl(uint32_t n, uint32_t size)
 
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
-//	int32_t wanted_csize = 0;
+	int32_t wanted_csize = 0;
 //	uint32_t available_on_current = 0;
 //	uint32_t tmp = 0;
 //	bool eat_next = false;
 //	bool eat_prev = false;
 //
-//	mm_chunk_t *chnk = NULL;
+	mm_chunk_t *chnk = NULL;
 //	mm_chunk_t *next = NULL;
 //	mm_chunk_t *prev = NULL;
-//	void *new_ptr = NULL;
+	void *new_ptr = NULL;
 //
-//	if (size == 0) {
-//		mm_free_impl(old_ptr);
-//		return NULL;
-//	}
-//
-//	wanted_csize = mm_to_csize(size);
-//	if (wanted_csize < 0) {
-//		return NULL;
-//	}
-//
+	if (size == 0) {
+		if (old_ptr != NULL) {
+			mm_free_impl(old_ptr);
+		}
+		return NULL;
+	}
+
+	wanted_csize = mm_to_csize(size);
+	if (wanted_csize < 0) {
+		return NULL;
+	}
+	mm_lock();
 //	if (old_ptr == NULL) {
-//		return mm_alloc_impl(size);
+		new_ptr = mm_alloc_impl(size);
+		chnk = mm_tochunk(new_ptr);
 //	}
-//
-//	mm_lock();
+
 //	chnk = mm_tochunk(old_ptr);
 //	available_on_current = chnk->csize;
 //	next = mm_chunk_next_get(chnk);
@@ -198,12 +200,11 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 //		chnk = mm_tochunk(new_ptr);
 //		mm_free_impl(old_ptr);
 //	}
-//
-//	chnk->allocator = __builtin_return_address(1);
-//	chnk->xorsum = mm_chunk_xorsum(chnk);
-//	mm_unlock();
-//	return new_ptr;
-	return NULL;
+
+	chnk->allocator = __builtin_return_address(1);
+	chnk->xorsum = mm_chunk_xorsum(chnk);
+	mm_unlock();
+	return new_ptr;
 }
 
 static void mm_free_impl(void *ptr)

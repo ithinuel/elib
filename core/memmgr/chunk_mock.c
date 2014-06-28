@@ -15,10 +15,23 @@
 */
 
 /* Includes ------------------------------------------------------------------*/
+#include <string.h>
 #include "unity_fixture.h"
+#include "common/common.h"
 #include "tests/chunk_mock.h"
 
+/* Types ---------------------------------------------------------------------*/
+typedef struct mock_chunk_merge_call_t	mock_chunk_merge_call_t;
+struct mock_chunk_merge_call_t
+{
+	mm_chunk_t		*expect_this;
+	mock_chunk_merge_call_t	*next;
+};
+
 /* Prototypes ----------------------------------------------------------------*/
+void *			unity_malloc				(size_t size);
+void			unity_free				(void *ptr);
+
 static mm_chunk_t *	mock_mm_find_first_free			(uint16_t wanted_csize);
 static mm_chunk_t *	mock_mm_chunk_split			(mm_chunk_t *this,
 								 uint16_t csize);
@@ -40,11 +53,7 @@ static struct
 	bool		return_null;
 } gs_mock_chunk_split_ctx;
 
-static struct
-{
-	bool		expect_call;
-	mm_chunk_t	*expect_this;
-} gs_mock_chunk_merge_ctx;
+static mock_chunk_merge_call_t *gs_mock_chunk_merge_expect = NULL;
 
 static mm_chunk_split_f gs_chunk_split = NULL;
 static mm_chunk_merge_f gs_chunk_merge = NULL;
@@ -74,10 +83,13 @@ static mm_chunk_t *mock_mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 
 static void mock_mm_chunk_merge(mm_chunk_t *this)
 {
-	TEST_ASSERT_MESSAGE(gs_mock_chunk_merge_ctx.expect_call, "Unexpected call to mm_chunk_merge.");
-	gs_mock_chunk_merge_ctx.expect_call = false;
+	TEST_ASSERT_NOT_NULL_MESSAGE(gs_mock_chunk_merge_expect, "Unexpected call to mm_chunk_merge.");
+	TEST_ASSERT_EQUAL_PTR(gs_mock_chunk_merge_expect->expect_this, this);
 
-	TEST_ASSERT_EQUAL_PTR(gs_mock_chunk_merge_ctx.expect_this, this);
+	mock_chunk_merge_call_t *next = gs_mock_chunk_merge_expect->next;
+	unity_free(gs_mock_chunk_merge_expect);
+	gs_mock_chunk_merge_expect = next;
+
 	gs_chunk_merge(this);
 }
 
@@ -86,7 +98,7 @@ void mock_chunk_setup(void)
 {
 	gs_mock_find_first_free_ctx.expect_call = false;
 	gs_mock_chunk_split_ctx.expect_call = false;
-	gs_mock_chunk_merge_ctx.expect_call = false;
+	gs_mock_chunk_merge_expect = NULL;
 
 	gs_chunk_split = mm_chunk_split;
 	gs_chunk_merge = mm_chunk_merge;
@@ -101,7 +113,7 @@ void mock_chunk_verify(void)
 				  "A Call to mm_chunk_find_first_free was expected.");
 	TEST_ASSERT_FALSE_MESSAGE(gs_mock_chunk_split_ctx.expect_call,
 				  "A Call to mm_chunk_split was expected.");
-	TEST_ASSERT_FALSE_MESSAGE(gs_mock_chunk_merge_ctx.expect_call,
+	TEST_ASSERT_NULL_MESSAGE(gs_mock_chunk_merge_expect,
 				  "A Call to mm_chunk_merge was expected.");
 }
 
@@ -122,6 +134,19 @@ void mock_mm_chunk_split_ExpectAndReturn(mm_chunk_t *this, uint16_t csize, bool 
 
 void mock_mm_chunk_merge_Expect(mm_chunk_t *this)
 {
-	gs_mock_chunk_merge_ctx.expect_call = true;
-	gs_mock_chunk_merge_ctx.expect_this = this;
+	mock_chunk_merge_call_t *new = unity_malloc(sizeof(mock_chunk_merge_call_t));
+	if (new == NULL) {
+		die("expect init failure");
+	}
+	new->expect_this = this;
+
+	if (gs_mock_chunk_merge_expect == NULL) {
+		gs_mock_chunk_merge_expect = new;
+	} else {
+		mock_chunk_merge_call_t *last = gs_mock_chunk_merge_expect;
+		while (last->next != NULL) {
+			last = last->next;
+		}
+		last->next = new;
+	}
 }
