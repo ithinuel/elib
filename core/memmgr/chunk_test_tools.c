@@ -52,7 +52,7 @@ void chunk_test_verify(chunk_test_state_t *array, uint32_t array_len)
 	uint32_t i = 0;
 
 	TEST_ASSERT_EQUAL_UINT32(array_len, mm_chunk_count());
-
+	mm_chunk_validate(chnk);
 	for (i = 0; (i < array_len) && (chnk != NULL); i++, chnk = mm_chunk_next_get(chnk))
 	{
 		TEST_ASSERT_EQUAL_UINT16(array[i].size, chnk->csize);

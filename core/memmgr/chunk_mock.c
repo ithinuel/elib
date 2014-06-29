@@ -139,6 +139,7 @@ void mock_mm_chunk_merge_Expect(mm_chunk_t *this)
 		die("expect init failure");
 	}
 	new->expect_this = this;
+	new->next = NULL;
 
 	if (gs_mock_chunk_merge_expect == NULL) {
 		gs_mock_chunk_merge_expect = new;
