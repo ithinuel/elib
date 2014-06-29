@@ -129,7 +129,7 @@ TEST(mm_chunk, merge_not_alloc_alloc)
 	
 	mm_chunk_merge(g_first);
 	chunk_test_verify(a_expect, 2);
-	chunk_test_fill_with_verify(g_first, 'A', payload_size);
+	chunk_test_fill_with_verify(mm_toptr(g_first), 'A', payload_size);
 }
 
 TEST(mm_chunk, merge_alloc_not_alloc)
@@ -142,7 +142,7 @@ TEST(mm_chunk, merge_alloc_not_alloc)
 	
 	mm_chunk_merge(g_first);
 	chunk_test_verify(a_expect, 2);
-	chunk_test_fill_with_verify(g_first, 'A', payload_size);
+	chunk_test_fill_with_verify(mm_toptr(g_first), 'A', payload_size);
 }
 
 TEST(mm_chunk, merge_alloc_alloc)
@@ -161,8 +161,8 @@ TEST(mm_chunk, merge_alloc_alloc)
 	die_Verify();
 	
 	chunk_test_verify(a_state, 3);
-	chunk_test_fill_with_verify(g_first, 'A', payload_a);
-	chunk_test_fill_with_verify(second, 'B', payload_b);
+	chunk_test_fill_with_verify(mm_toptr(g_first), 'A', payload_a);
+	chunk_test_fill_with_verify(mm_toptr(second), 'B', payload_b);
 }
 
 TEST(mm_chunk, merge_bigblocks)

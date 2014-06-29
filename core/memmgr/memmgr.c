@@ -131,14 +131,7 @@ static void *mm_calloc_impl(uint32_t n, uint32_t size)
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
 	int32_t wanted_csize = 0;
-	uint32_t available_on_current = 0;
-	uint32_t tmp = 0;
-//	bool eat_next = false;
-//	bool eat_prev = false;
-
 	mm_chunk_t *chnk = NULL;
-	mm_chunk_t *next = NULL;
-	mm_chunk_t *prev = NULL;
 	void *new_ptr = NULL;
 
 	if (size == 0) {
@@ -164,50 +157,25 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	}
 
 	chnk = mm_tochunk(old_ptr);
-	available_on_current = chnk->csize;
-	next = mm_chunk_next_get(chnk);
-	if ((next != NULL) && !next->allocated) {
-		tmp = available_on_current + next->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-//			eat_next = true;
-		}
-	}
-	prev = mm_chunk_prev_get(chnk);
-	if ((prev != NULL) && !prev->allocated) {
-		tmp = available_on_current + prev->csize;
-		if (tmp <= UINT15_MAX) {
-			available_on_current = tmp;
-//			eat_prev = true;
-		}
-	}
 
-//	if (available_on_current >= wanted_csize) {
-//		/* we're ok to merge & shrink this chunk*/
-//		if (eat_next) {
-//			mm_chunk_merge(chnk);
-//		}
-//		if (eat_prev) {
-//			mm_chunk_merge(prev);
-//			chnk = prev;
-//		}
-//
-//		mm_chunk_guard_set(chnk, size);
-//		chnk->xorsum = mm_chunk_xorsum(chnk);
-//
-//		mm_chunk_split(chnk, wanted_csize);
-//		new_ptr = mm_toptr(chnk);
-//	} else {
+	if (wanted_csize < chnk->csize) {
+		mm_chunk_split(chnk, wanted_csize);
+	} else if (wanted_csize > chnk->csize) {
 		new_ptr = mm_alloc_impl(size);
 		if (new_ptr != NULL) {
 			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
 			chnk = mm_tochunk(new_ptr);
 			mm_free_impl(old_ptr);
 		}
-//	}
+	} else {
+		new_ptr = old_ptr;
+	}
 
-	chnk->allocator = __builtin_return_address(1);
-	chnk->xorsum = mm_chunk_xorsum(chnk);
+	if (new_ptr != NULL) {
+		chnk->allocator = __builtin_return_address(1);
+		chnk->xorsum = mm_chunk_xorsum(chnk);
+	}
+
 	mm_unlock();
 	return new_ptr;
 }

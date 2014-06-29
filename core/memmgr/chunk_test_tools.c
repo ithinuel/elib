@@ -81,9 +81,8 @@ uint32_t chunk_test_fill_with_prepare(mm_chunk_t *this, char val)
 	return payload_size;
 }
 
-void chunk_test_fill_with_verify(mm_chunk_t *this, char val, uint32_t payload_size)
+void chunk_test_fill_with_verify(uint8_t *ptr, char val, uint32_t payload_size)
 {
-	uint8_t *ptr = mm_toptr(this);
 	for (uint32_t i = 0; i < payload_size; i++) {
 		TEST_ASSERT_EQUAL_UINT8_MESSAGE(val, ptr[i], "Data has beed lost");
 	}

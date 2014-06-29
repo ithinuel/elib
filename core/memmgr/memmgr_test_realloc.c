@@ -40,8 +40,30 @@ TEST_GROUP_RUNNER(memmgr_realloc)
 
 	RUN_TEST_CASE(memmgr_realloc, to_zero_should_free);
 	RUN_TEST_CASE(memmgr_realloc, too_much_does_nothing);
-	RUN_TEST_CASE(memmgr_realloc, can_not_fit_in_adjacent_should_move_to_a_new_chunk);
-	RUN_TEST_CASE(memmgr_realloc, can_not_fit_in_adjacent_should_move_to_a_new_chunk_but_none_found);
+
+	/*
+	 * same csize => return old_ptr & update allocator & guard
+	 *
+	 * shrink: diff := old_csize - new_csize
+	 * diff  < min_csize			=> return old_ptr & update allocator
+	 * diff >= min_csize && next == null	=> split
+	 * diff >= min_csize && next allocated	=> split
+	 * diff >= min_csize && next free	=> split & merge
+	 *
+	 * grow:
+	 * this
+	 * this + next
+	 * prev + this
+	 * prev + this + next
+	 *
+	 * wanted_csize == this->csize
+	 * wanted_csize  < this->csize
+	 * wanted_csize  > this->csize
+	 */
+
+	RUN_TEST_CASE(memmgr_realloc, shrink_same_csize_update_guard);
+	RUN_TEST_CASE(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new);
+	RUN_TEST_CASE(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new_but_none_found);
 }
 
 TEST_SETUP(memmgr_realloc)
@@ -61,9 +83,7 @@ TEST_SETUP(memmgr_realloc)
 TEST_TEAR_DOWN(memmgr_realloc)
 {
 	if (gs_ptr != NULL) {
-		for(uint32_t i = 0; i < gs_size; i++) {
-			TEST_ASSERT_EQUAL_UINT8('A', gs_ptr[i]);
-		}
+		chunk_test_fill_with_verify(gs_ptr, 'A', gs_size);
 	}
 	chunk_test_clear();
 	mock_chunk_verify();
@@ -107,9 +127,9 @@ TEST(memmgr_realloc_new, from_null_some)
 	mock_mm_chunk_split_ExpectAndReturn(g_first, 11, false);
 	mock_mm_chunk_merge_Expect(mm_compute_next(g_first, 11));
 
-	uint8_t *ptr = mm_realloc(NULL, 23);
+	uint8_t *ptr = mm_realloc(NULL, 22);
 	TEST_ASSERT_EQUAL_PTR(mm_toptr(g_first), ptr);
-	memset(ptr, 'A', 23);
+	memset(ptr, 'A', 22);
 
 	chunk_test_verify(a_expect, 2);
 }
@@ -138,7 +158,14 @@ TEST(memmgr_realloc, too_much_does_nothing)
 	chunk_test_verify(a_expect, 4);
 }
 
-TEST(memmgr_realloc, can_not_fit_in_adjacent_should_move_to_a_new_chunk)
+TEST(memmgr_realloc, shrink_same_csize_update_guard)
+{
+	uint8_t *ptr = mm_realloc(gs_ptr, 20);
+	TEST_ASSERT_EQUAL_PTR(ptr, gs_ptr);
+	chunk_test_fill_with_verify(ptr, 'A', 20);
+}
+
+TEST(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new)
 {
 	chunk_test_state_t a_expect[] = {{56, false}, {57, true}, {143, false}};
 
@@ -158,7 +185,7 @@ TEST(memmgr_realloc, can_not_fit_in_adjacent_should_move_to_a_new_chunk)
 	chunk_test_verify(a_expect, 3);
 }
 
-TEST(memmgr_realloc, can_not_fit_in_adjacent_should_move_to_a_new_chunk_but_none_found)
+TEST(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new_but_none_found)
 {
 	chunk_test_state_t a_expect[] = {{16, false}, {10, true}, {30, false}, {200, false}};
 
