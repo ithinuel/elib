@@ -179,6 +179,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	}
 
 	if (new_ptr != NULL) {
+		mm_chunk_guard_set(chnk, size);
 		chnk->allocator = __builtin_return_address(1);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 	}

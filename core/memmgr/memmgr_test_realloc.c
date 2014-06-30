@@ -30,6 +30,8 @@
 /* helpers -------------------------------------------------------------------*/
 static uint8_t *gs_ptr = NULL;
 static uint32_t gs_size = 0;
+static char	gs_fill_val = 0;
+static uint32_t gs_chunk_envelop = 0;
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr_realloc);
@@ -41,41 +43,90 @@ TEST_GROUP_RUNNER(memmgr_realloc)
 	RUN_TEST_CASE(memmgr_realloc, to_zero_should_free);
 	RUN_TEST_CASE(memmgr_realloc, too_much_does_nothing);
 
+
 	/*
-	 * same csize => return old_ptr & update allocator & guard
-	 *
-	 * shrink: diff := old_csize - new_csize
-	 * diff  < min_csize			=> return old_ptr & update allocator
-	 * diff >= min_csize && next == null	=> split
-	 * diff >= min_csize && next allocated	=> split
-	 * diff >= min_csize && next free	=> split & merge
-	 *
-	 * grow:
-	 * this
-	 * this + next
-	 * prev + this
-	 * prev + this + next
-	 *
 	 * wanted_csize  < this->csize => shrink
 	 * wanted_csize == this->csize => nothing
 	 * wanted_csize  > this->csize => grow
+	 *
+	 * same csize => return old_ptr & update allocator & guard
+	 *
+	 * is available: not null & not allocated
+	 *
+	 * shrink:
+	 * # valid only if next is available
+	 * after_merge := this.csize + next.csize
+	 *
+	 * next is available && after_merge > max && (this.csize-new_csize)  < min_csize	=> .
+	 * next is available && after_merge > max && (this.csize-new_csize) >= min_csize	=> split(this)
+	 * next is available && after_merge <= max						=> merge(this) o split(this)
+	 *
+	 *
+	 * grow:
+	 * # valid only if next is available
+	 * after_merge_next := this.csize + next.csize
+	 * # valid only if next & prev are available
+	 * after_merge_both := prev.csize + this.csize + next.csize
+	 * # valid only if prev is available
+	 * after_merge_prev := prev.csize + this.csize
+	 *
+	 * new_csize <= max
+	 * 
+	 * next is available && after_merge_next <= max
+	 *		     && after_merge_next >= new_csize	=> merge(this)
+	 * prev is available && ((after_merge_next > max) || (after_merge_next < new_csize))
+	 *		     && after_merge_prev <= max
+	 *		     && after_merge_prev >= new_csizez	=> merge(prev) o this = prev
+	 * prev is available && next is available
+	 *		     && after_merge_next < new_csize
+	 *		     && after_merge_prev < new_csize
+	 *		     && after_merge_both <= max
+	 *		     && after_merge_both >= new_csize	=> merge(prev) o this = prev o merge(this)
+	 *
+	 * N: next is available
+	 * N_m: after_merge_next <= max
+	 * N_e: after_merge_next >= new_csize
+	 * B_m: after_merge_both <= max
+	 *
+	 * P: prev is available
+	 * P_m: after_merge_prev <= max
+	 * P_e: after_merge_prev >= new_csize
+	 * B_e: after_merge_both >= new_csize
+	 *
+	 * merge(this) = (N & N_m & N_e) | (P & N & !N_e & !P_e & B_m & B_e)
+	 * merge(prev) o this = prev = (P & (!N_m | !N_e) & P_m & P_e) | (P & N & !N_e & !P_e & B_m & B_e)
+	 * 
+	 * new <- split(this, new_csize)
+	 * new  => merge(new)
 	 */
+	 
+	RUN_TEST_CASE(memmgr_realloc, must_not_merge_nor_split);
+	RUN_TEST_CASE(memmgr_realloc, must_not_merge_then_split);
+	RUN_TEST_CASE(memmgr_realloc, must_not_merge_then_split_and_merge);
 
-	RUN_TEST_CASE(memmgr_realloc, shrink_same_csize_update_guard);
-	RUN_TEST_CASE(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new);
-	RUN_TEST_CASE(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new_but_none_found);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_next_then_cant_split);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_next_then_can_split_and_merge);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_prev_then_cant_split);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_prev_then_can_split_and_merge);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_both_then_cant_split);
+	RUN_TEST_CASE(memmgr_realloc, must_merge_with_both_then_can_split_and_merge);
 }
 
 TEST_SETUP(memmgr_realloc)
 {
-	chunk_test_state_t a_state[] = {{16, false}, {10, true}, {30, false}, {200, false}};
+	chunk_test_state_t a_state[] = {{16, false}, {20, true}, {20, false}, {200, false}};
 	chunk_test_prepare(a_state, 4);
+	
 	mm_chunk_t *second = mm_chunk_next_get(g_first);
-	gs_size = (10-(mm_header_csize()+MM_CFG_GUARD_SIZE))*MM_CFG_ALIGNMENT;
+	gs_chunk_envelop = mm_header_csize()+MM_CFG_GUARD_SIZE;
+	
+	gs_size = (20-(gs_chunk_envelop + gs_chunk_envelop/2))*MM_CFG_ALIGNMENT + (MM_CFG_ALIGNMENT / 2);
 	mm_chunk_guard_set(second, gs_size);
 	second->xorsum = mm_chunk_xorsum(second);
+	
+	gs_fill_val = 'A';
 	gs_ptr = mm_toptr(second);
-	memset(gs_ptr, 'A', gs_size);
+	memset(gs_ptr, gs_fill_val, gs_size);
 
 	mock_chunk_setup();
 }
@@ -83,7 +134,7 @@ TEST_SETUP(memmgr_realloc)
 TEST_TEAR_DOWN(memmgr_realloc)
 {
 	if (gs_ptr != NULL) {
-		chunk_test_fill_with_verify(gs_ptr, 'A', gs_size);
+		chunk_test_fill_with_verify(gs_ptr, gs_fill_val, gs_size);
 	}
 	chunk_test_clear();
 	mock_chunk_verify();
@@ -153,50 +204,74 @@ TEST(memmgr_realloc, to_zero_should_free)
 
 TEST(memmgr_realloc, too_much_does_nothing)
 {
-	chunk_test_state_t a_expect[] = {{16, false}, {10, true}, {30, false}, {200, false}};
+	chunk_test_state_t a_expect[] = {{16, false}, {20, true}, {20, false}, {200, false}};
 	TEST_ASSERT_NULL(mm_realloc(gs_ptr, 1024*1024));
 	chunk_test_verify(a_expect, 4);
 }
 
-TEST(memmgr_realloc, shrink_same_csize_update_guard)
+TEST(memmgr_realloc, must_not_merge_nor_split)
 {
-	uint8_t *ptr = mm_realloc(gs_ptr, 20);
-	TEST_ASSERT_EQUAL_PTR(ptr, gs_ptr);
-	chunk_test_fill_with_verify(ptr, 'A', 20);
-}
+	chunk_test_state_t a_expect[] = {{16, false}, {20, true}, {20, false}, {200, false}};
+	uint32_t new_payload = (20 - gs_chunk_envelop)*MM_CFG_ALIGNMENT;
 
-TEST(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new)
-{
-	chunk_test_state_t a_expect[] = {{56, false}, {57, true}, {143, false}};
+	uint8_t *ptr = mm_realloc(gs_ptr, new_payload);
+	TEST_ASSERT_EQUAL_PTR(gs_ptr, ptr);
 
-	mm_chunk_t *this = mm_tochunk(gs_ptr);
-	mm_chunk_t *last = mm_chunk_next_get(this);
-	last = mm_chunk_next_get(last);
+	chunk_test_fill_with_verify(ptr, 'A', gs_size);
+	memset(ptr, 'B', new_payload);
+	chunk_test_fill_with_verify(ptr, 'B', new_payload);
 
-	mock_mm_find_first_free_ExpectAndReturn(57, last);
-	mock_mm_chunk_split_ExpectAndReturn(last, 57, false);
-	mock_mm_chunk_merge_Expect(this);
-	mock_mm_chunk_merge_Expect(mm_chunk_prev_get(this));
-
-	uint8_t *new = mm_realloc(gs_ptr, (57-(mm_header_csize()+MM_CFG_GUARD_SIZE))*MM_CFG_ALIGNMENT);
-	TEST_ASSERT_EQUAL_PTR(mm_toptr(last), new);
-	gs_ptr = new;
-
-	chunk_test_verify(a_expect, 3);
-}
-
-TEST(memmgr_realloc, grow_dont_fit_in_sibling_alloc_new_but_none_found)
-{
-	chunk_test_state_t a_expect[] = {{16, false}, {10, true}, {30, false}, {200, false}};
-
-	mm_chunk_t *this = mm_tochunk(gs_ptr);
-	mm_chunk_t *last = mm_chunk_next_get(this);
-	last = mm_chunk_next_get(last);
-
-	mock_mm_find_first_free_ExpectAndReturn(57, NULL);
-
-	uint8_t *new = mm_realloc(gs_ptr, (57-(mm_header_csize()+MM_CFG_GUARD_SIZE))*MM_CFG_ALIGNMENT);
-	TEST_ASSERT_NULL(new);
+	gs_fill_val = 'B';
+	gs_size = new_payload;
 
 	chunk_test_verify(a_expect, 4);
 }
+
+TEST(memmgr_realloc, must_not_merge_then_split)
+{
+//	new_payload = (20 - 2*gs_chunk_envelop)*MM_CFG_ALIGNMENT + 1;
+//
+//	ptr = mm_realloc(gs_ptr, new_payload);
+//	TEST_ASSERT_EQUAL_PTR(gs_ptr, ptr);
+//	memset(ptr, 'A', new_payload);
+//
+//	chunk_test_fill_with_verify(ptr, 'A', new_payload);
+//	chunk_test_verify(a_expect, 4);
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_not_merge_then_split_and_merge)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_next_then_cant_split)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_next_then_can_split_and_merge)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_prev_then_cant_split)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_prev_then_can_split_and_merge)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_both_then_cant_split)
+{
+	TEST_FAIL();
+}
+
+TEST(memmgr_realloc, must_merge_with_both_then_can_split_and_merge)
+{
+	TEST_FAIL();
+}
+
