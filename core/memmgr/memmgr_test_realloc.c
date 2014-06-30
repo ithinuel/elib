@@ -56,9 +56,9 @@ TEST_GROUP_RUNNER(memmgr_realloc)
 	 * prev + this
 	 * prev + this + next
 	 *
-	 * wanted_csize == this->csize
-	 * wanted_csize  < this->csize
-	 * wanted_csize  > this->csize
+	 * wanted_csize  < this->csize => shrink
+	 * wanted_csize == this->csize => nothing
+	 * wanted_csize  > this->csize => grow
 	 */
 
 	RUN_TEST_CASE(memmgr_realloc, shrink_same_csize_update_guard);

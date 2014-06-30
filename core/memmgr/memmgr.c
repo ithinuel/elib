@@ -38,6 +38,8 @@ typedef struct
 static void			mm_lock			(void);
 static void			mm_unlock		(void);
 
+static bool			mm_is_available		(mm_chunk_t *chnk);
+
 static void *			mm_alloc_impl		(uint32_t size);
 static void *			mm_zalloc_impl		(uint32_t size);
 static void *			mm_calloc_impl		(uint32_t n,
@@ -70,6 +72,11 @@ static void mm_unlock(void)
 	}
 }
 
+static bool mm_is_available(mm_chunk_t *chnk)
+{
+	return (chnk != NULL) && (!chnk->allocated);
+}
+
 static void *mm_alloc_impl(uint32_t size)
 {
 	int32_t wanted_csize = 0;
@@ -90,7 +97,7 @@ static void *mm_alloc_impl(uint32_t size)
 		mm_chunk_t *new = mm_chunk_split(chnk, wanted_csize);
 		if (new != NULL) {
 			mm_chunk_t *next = mm_chunk_next_get(new);
-			if ((next != NULL) && !next->allocated){
+			if (mm_is_available(next)){
 				mm_chunk_merge(new);
 			}
 		}
@@ -194,11 +201,11 @@ static void mm_free_impl(void *ptr)
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
 		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
-		if ((sibbling != NULL) && !sibbling->allocated) {
+		if (mm_is_available(sibbling)) {
 			mm_chunk_merge(chnk);
 		}
 		sibbling = mm_chunk_prev_get(chnk);
-		if ((sibbling != NULL) && !sibbling->allocated) {
+		if (mm_is_available(sibbling)) {
 			mm_chunk_merge(sibbling);
 		}
 	}
