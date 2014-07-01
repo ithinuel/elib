@@ -138,7 +138,7 @@ static void *mm_calloc_impl(uint32_t n, uint32_t size)
 static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 {
 	int32_t wanted_csize = 0;
-	mm_chunk_t *chnk = NULL;
+	mm_chunk_t *this = NULL;
 	void *new_ptr = NULL;
 
 	if (size == 0) {
@@ -155,33 +155,55 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	mm_lock();
 	if (old_ptr == NULL) {
 		new_ptr = mm_alloc_impl(size);
-		chnk = mm_tochunk(new_ptr);
+		this = mm_tochunk(new_ptr);
 
-		chnk->allocator = __builtin_return_address(1);
-		chnk->xorsum = mm_chunk_xorsum(chnk);
+		this->allocator = __builtin_return_address(1);
+		this->xorsum = mm_chunk_xorsum(this);
 		mm_unlock();
 		return new_ptr;
 	}
 
-	chnk = mm_tochunk(old_ptr);
+	this = mm_tochunk(old_ptr);
 
-	if (wanted_csize < chnk->csize) {
-		mm_chunk_split(chnk, wanted_csize);
-	} else if (wanted_csize > chnk->csize) {
+	if (wanted_csize > this->csize) {
+		mm_chunk_t *next = mm_chunk_next_get(this);
+		mm_chunk_t *prev = mm_chunk_prev_get(this);
+		bool next_available = mm_is_available(next);
+		bool prev_available = mm_is_available(prev);
+		if (next_available && ((this->csize + next->csize) >= wanted_csize)) {
+			mm_chunk_merge(this);
+		} else if (prev_available && ((prev->csize + this->csize) >= wanted_csize)) {
+			mm_chunk_merge(prev);
+			this = prev;
+			old_ptr = mm_toptr(this);
+		} else if (prev_available && next_available &&
+			   ((prev->csize + this->csize + next->csize) >= wanted_csize)) {
+			mm_chunk_merge(this);
+			mm_chunk_merge(prev);
+			this = prev;
+			old_ptr = mm_toptr(this);
+		}
+	}
+
+	if (wanted_csize > this->csize) {
 		new_ptr = mm_alloc_impl(size);
 		if (new_ptr != NULL) {
-			memcpy(new_ptr, old_ptr, umin(chnk->guard_offset, size));
-			chnk = mm_tochunk(new_ptr);
+			memcpy(new_ptr, old_ptr, umin(this->guard_offset, size));
+			this = mm_tochunk(new_ptr);
 			mm_free_impl(old_ptr);
 		}
 	} else {
+		mm_chunk_t *new = mm_chunk_split(this, wanted_csize);
+		if (new != NULL) {
+			mm_chunk_merge(new);
+		}
 		new_ptr = old_ptr;
 	}
 
 	if (new_ptr != NULL) {
-		mm_chunk_guard_set(chnk, size);
-		chnk->allocator = __builtin_return_address(1);
-		chnk->xorsum = mm_chunk_xorsum(chnk);
+		mm_chunk_guard_set(this, size);
+		this->allocator = __builtin_return_address(1);
+		this->xorsum = mm_chunk_xorsum(this);
 	}
 
 	mm_unlock();
