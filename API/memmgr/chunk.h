@@ -23,7 +23,7 @@
 #include "common/mockable.h"
 
 /* Macro definitions ---------------------------------------------------------*/
-#define UINT15_MAX		(32767)
+#define CSIZE_MAX		(32767)
 
 /* Types ---------------------------------------------------------------------*/
 typedef struct
@@ -81,12 +81,7 @@ uint32_t		mm_chunk_count		(void);
 void			mm_chunk_info		(mm_cinfo_t *infos,
 						 uint32_t size);
 
-/**
- * Convert data size in byte to chunk size in alignment unit including the envelop.
- * @param	size	Data Size in byte.
- * @return	chunk size or -1 if size is too big.
- */
-int32_t 		mm_to_csize		(uint32_t size);
+uint32_t 		mm_to_csize		(uint32_t size);
 uint16_t		mm_min_csize		(void);
 uint16_t		mm_header_csize		(void);
 

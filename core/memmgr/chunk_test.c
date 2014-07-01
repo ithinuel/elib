@@ -45,10 +45,10 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, prev_get);
 
 	RUN_TEST_CASE(mm_chunk, merge_alloc_null);
-	RUN_TEST_CASE(mm_chunk, merge_not_alloc_null);
-	RUN_TEST_CASE(mm_chunk, merge_both_not_alloc);
-	RUN_TEST_CASE(mm_chunk, merge_not_alloc_alloc);
-	RUN_TEST_CASE(mm_chunk, merge_alloc_not_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_nalloc_null);
+	RUN_TEST_CASE(mm_chunk, merge_both_nalloc);
+	RUN_TEST_CASE(mm_chunk, merge_nalloc_alloc);
+	RUN_TEST_CASE(mm_chunk, merge_alloc_nalloc);
 	RUN_TEST_CASE(mm_chunk, merge_alloc_alloc);
 	RUN_TEST_CASE(mm_chunk, merge_bigblocks);
 	
@@ -99,7 +99,7 @@ TEST(mm_chunk, merge_alloc_null)
 	chunk_test_verify(a_state, 1);
 }
 
-TEST(mm_chunk, merge_not_alloc_null)
+TEST(mm_chunk, merge_nalloc_null)
 {
 	chunk_test_state_t a_state[] = {{256, false}};
 	chunk_test_prepare(a_state, 1);
@@ -108,7 +108,7 @@ TEST(mm_chunk, merge_not_alloc_null)
 	chunk_test_verify(a_state, 1);
 }
 
-TEST(mm_chunk, merge_both_not_alloc)
+TEST(mm_chunk, merge_both_nalloc)
 {
 	chunk_test_state_t a_state[] = {{128, false}, {128, false}};
 	chunk_test_prepare(a_state, 2);
@@ -118,7 +118,7 @@ TEST(mm_chunk, merge_both_not_alloc)
 	chunk_test_verify(a_expect, 1);
 }
 
-TEST(mm_chunk, merge_not_alloc_alloc)
+TEST(mm_chunk, merge_nalloc_alloc)
 {
 	chunk_test_state_t a_state[] = {{32, false}, {128, true}, {96, false}};
 	chunk_test_state_t a_expect[] = {{160, true}, {96, false}};
@@ -132,7 +132,7 @@ TEST(mm_chunk, merge_not_alloc_alloc)
 	chunk_test_fill_with_verify(mm_toptr(g_first), 'A', payload_size);
 }
 
-TEST(mm_chunk, merge_alloc_not_alloc)
+TEST(mm_chunk, merge_alloc_nalloc)
 {
 	chunk_test_state_t a_state[] = {{32, true}, {128, false}, {96, false}};
 	chunk_test_state_t a_expect[] = {{160, true}, {96, false}};
@@ -168,12 +168,12 @@ TEST(mm_chunk, merge_alloc_alloc)
 TEST(mm_chunk, merge_bigblocks)
 {
 	mock_memmgr_setup();
-	mm_chunk_t *gigablock = (mm_chunk_t *)mm_alloc(2*UINT15_MAX*MM_CFG_ALIGNMENT);
+	mm_chunk_t *gigablock = (mm_chunk_t *)mm_alloc(2*CSIZE_MAX*MM_CFG_ALIGNMENT);
 
 	UT_PTR_SET(g_first, gigablock);
 
-	chunk_test_state_t a_state[] = {{UINT15_MAX/2, false}, {UINT15_MAX/2 +1 , false}, {UINT15_MAX, false}};
-	chunk_test_state_t a_expect[] = {{UINT15_MAX, false}, {UINT15_MAX, false}};
+	chunk_test_state_t a_state[] = {{CSIZE_MAX/2, false}, {CSIZE_MAX/2 +1 , false}, {mm_min_csize(), false}};
+	chunk_test_state_t a_expect[] = {{CSIZE_MAX, false}, {mm_min_csize(), false}};
 	chunk_test_prepare(a_state, 3);
 
 	mm_chunk_merge(g_first);

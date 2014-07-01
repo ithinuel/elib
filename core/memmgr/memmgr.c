@@ -87,7 +87,7 @@ static void *mm_alloc_impl(uint32_t size)
 	}
 
 	wanted_csize = mm_to_csize(size);
-	if (wanted_csize < 0) {
+	if (wanted_csize > CSIZE_MAX) {
 		return NULL;
 	}
 
@@ -149,7 +149,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	}
 
 	wanted_csize = mm_to_csize(size);
-	if (wanted_csize < 0) {
+	if (wanted_csize > CSIZE_MAX) {
 		return NULL;
 	}
 	mm_lock();
@@ -247,7 +247,7 @@ void mm_init(uint8_t *heap, uint32_t size)
 	uint32_t heap_size = size/MM_CFG_ALIGNMENT;
 
 	while (heap_size >= mm_min_csize()) {
-		uint16_t size = umin(heap_size, UINT15_MAX);
+		uint16_t size = umin(heap_size, CSIZE_MAX);
 		heap_size -= size;
 
 		mm_chunk_init(chnk, prev, size);

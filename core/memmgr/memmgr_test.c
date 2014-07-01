@@ -194,11 +194,11 @@ TEST(memmgr, calloc_zalloc_failed)
 TEST(memmgr, init)
 {
 	chunk_test_state_t a_expect[] = {
-			{9, true}, {UINT15_MAX-9, false},
-			{UINT15_MAX, false}, {UINT15_MAX, false},
-			{UINT15_MAX, false}, {UINT15_MAX, false},
-			{UINT15_MAX, false}, {UINT15_MAX, false},
-			{UINT15_MAX, false}, {8, false}};
+			{9, true}, {CSIZE_MAX-9, false},
+			{CSIZE_MAX, false}, {CSIZE_MAX, false},
+			{CSIZE_MAX, false}, {CSIZE_MAX, false},
+			{CSIZE_MAX, false}, {CSIZE_MAX, false},
+			{CSIZE_MAX, false}, {8, false}};
 	UT_PTR_SET(g_first, gs_heap);
 
 	mm_init(gs_heap, 1024*1024);

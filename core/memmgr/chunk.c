@@ -67,7 +67,7 @@ static void mm_chunk_merge_impl(mm_chunk_t *this)
 
 	uint32_t guard_offset = this->guard_offset;
 	uint32_t size = this->csize + next->csize;
-	if (size > UINT15_MAX) {
+	if (size > CSIZE_MAX) {
 		return;
 	}
 	gs_chunk_boundary.count --;
@@ -273,14 +273,10 @@ void mm_chunk_info(mm_cinfo_t *infos, uint32_t size)
 	}
 }
 
-int32_t mm_to_csize(uint32_t size)
+uint32_t mm_to_csize(uint32_t size)
 {
 	int32_t wanted_csize = mm_to_aligned_csize(size);
 	wanted_csize += mm_header_csize() + MM_CFG_GUARD_SIZE;
-
-	if (wanted_csize > UINT15_MAX) {
-		return -1;
-	}
 	return wanted_csize;
 }
 
