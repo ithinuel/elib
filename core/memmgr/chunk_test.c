@@ -58,6 +58,8 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, find_first_free);
 	
 	RUN_TEST_CASE(mm_chunk, info);
+
+	RUN_TEST_CASE(mm_chunk, valid_between_included_wanted_csize_and_csize_max);
 }
 TEST_SETUP(mm_chunk)
 {
@@ -244,4 +246,21 @@ TEST(mm_chunk, info)
 	memset(a_out, 0, sizeof(a_out));
 	mm_chunk_info(a_out, 2);
 	TEST_ASSERT_EQUAL_MEMORY(a_expect_2, a_out, sizeof(a_expect_2));
+}
+
+TEST(mm_chunk, valid_between_included_wanted_csize_and_csize_max)
+{
+	TEST_ASSERT_TRUE(mm_validate_csize(0, 0));
+	TEST_ASSERT_FALSE(mm_validate_csize(10, 0));
+
+	TEST_ASSERT_TRUE(mm_validate_csize(10, 10));
+	TEST_ASSERT_TRUE(mm_validate_csize(10, 1234));
+	TEST_ASSERT_TRUE(mm_validate_csize(10, CSIZE_MAX));
+
+	TEST_ASSERT_FALSE(mm_validate_csize(10, CSIZE_MAX + 1));
+	TEST_ASSERT_FALSE(mm_validate_csize(10, CSIZE_MAX * CSIZE_MAX));
+
+	TEST_ASSERT_TRUE(mm_validate_csize(CSIZE_MAX, CSIZE_MAX));
+	TEST_ASSERT_FALSE(mm_validate_csize(CSIZE_MAX, 10));
+	TEST_ASSERT_FALSE(mm_validate_csize(CSIZE_MAX, CSIZE_MAX * CSIZE_MAX));
 }

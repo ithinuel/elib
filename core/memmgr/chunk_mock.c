@@ -21,11 +21,44 @@
 #include "tests/chunk_mock.h"
 
 /* Types ---------------------------------------------------------------------*/
-typedef struct mock_chunk_merge_call_t	mock_chunk_merge_call_t;
-struct mock_chunk_merge_call_t
+typedef struct _mock_call	mock_call_t;
+typedef enum
 {
-	mm_chunk_t		*expect_this;
-	mock_chunk_merge_call_t	*next;
+	mock_call_type_none,
+	mock_call_type_merge,
+	mock_call_type_split,
+	mock_call_type_find_first_free,
+	mock_call_type_validate_csize
+} mock_call_type_e;
+
+struct _mock_call
+{
+	mock_call_t 		*next;
+	mock_call_type_e	type;
+	union
+	{
+		struct
+		{
+			mm_chunk_t	*expect_this;
+		} merge;
+		struct
+		{
+			mm_chunk_t	*expect_this;
+			uint16_t	expect_csize;
+			bool		then_return_null;
+		} split;
+		struct
+		{
+			uint16_t	expect_csize;
+			mm_chunk_t	*then_return;
+		} find_first_free;
+		struct
+		{
+			uint16_t	expect_min_csize;
+			uint32_t	expect_csize;
+			bool		then_return;
+		} validate_csize;
+	} call;
 };
 
 /* Prototypes ----------------------------------------------------------------*/
@@ -36,24 +69,16 @@ static mm_chunk_t *	mock_mm_find_first_free			(uint16_t wanted_csize);
 static mm_chunk_t *	mock_mm_chunk_split			(mm_chunk_t *this,
 								 uint16_t csize);
 static void		mock_mm_chunk_merge			(mm_chunk_t *this);
+static bool		mock_mm_validate_csize			(uint16_t min_csize,
+								 uint32_t csize);
+
+static mock_call_type_e mock_expect				(void);
+static void		mock_push				(mock_call_t *new);
+static void		mock_pop				(void);
 
 /* Variables -----------------------------------------------------------------*/
-static struct
-{
-	bool		expect_call;
-	uint16_t	expect_wanted_csize;
-	mm_chunk_t 	*then_return;
-} gs_mock_find_first_free_ctx;
-
-static struct
-{
-	bool		expect_call;
-	mm_chunk_t 	*expect_this;
-	uint16_t	expect_csize;
-	bool		return_null;
-} gs_mock_chunk_split_ctx;
-
-static mock_chunk_merge_call_t *gs_mock_chunk_merge_expect = NULL;
+static mock_call_t *gs_mock_expect = NULL;
+static mock_call_t *gs_mock_last = NULL;
 
 static mm_chunk_split_f gs_chunk_split = NULL;
 static mm_chunk_merge_f gs_chunk_merge = NULL;
@@ -61,21 +86,26 @@ static mm_chunk_merge_f gs_chunk_merge = NULL;
 /* Private definitions -------------------------------------------------------*/
 static mm_chunk_t *mock_mm_find_first_free(uint16_t wanted_csize)
 {
-	TEST_ASSERT_MESSAGE(gs_mock_find_first_free_ctx.expect_call, "Unexpected call to mm_find_first_free.");
-	TEST_ASSERT_EQUAL_UINT16(gs_mock_find_first_free_ctx.expect_wanted_csize, wanted_csize);
-	gs_mock_find_first_free_ctx.expect_call = false;
-	return gs_mock_find_first_free_ctx.then_return;
+	TEST_ASSERT_MESSAGE(mock_expect() == mock_call_type_find_first_free,
+			    "Unexpected call to mm_find_first_free.");
+	TEST_ASSERT_EQUAL_UINT16(gs_mock_expect->call.find_first_free.expect_csize, wanted_csize);
+
+	mm_chunk_t *ret = gs_mock_expect->call.find_first_free.then_return;
+	mock_pop();
+	return ret;
 }
 
 static mm_chunk_t *mock_mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 {
-	TEST_ASSERT_MESSAGE(gs_mock_chunk_split_ctx.expect_call, "Unexpected call to mm_chunk_split.");
-	gs_mock_chunk_split_ctx.expect_call = false;
+	TEST_ASSERT_MESSAGE(mock_expect() == mock_call_type_split,
+			    "Unexpected call to mm_chunk_split.");
 
-	TEST_ASSERT_EQUAL_PTR(gs_mock_chunk_split_ctx.expect_this, this);
-	TEST_ASSERT_EQUAL_UINT16(gs_mock_chunk_split_ctx.expect_csize, csize);
+	TEST_ASSERT_EQUAL_PTR(gs_mock_expect->call.split.expect_this, this);
+	TEST_ASSERT_EQUAL_UINT16(gs_mock_expect->call.split.expect_csize, csize);
 
-	if (gs_mock_chunk_split_ctx.return_null) {
+	bool then_return_null = gs_mock_expect->call.split.then_return_null;
+	mock_pop();
+	if (then_return_null) {
 		return NULL;
 	}
 	return gs_chunk_split(this, csize);
@@ -83,71 +113,128 @@ static mm_chunk_t *mock_mm_chunk_split(mm_chunk_t *this, uint16_t csize)
 
 static void mock_mm_chunk_merge(mm_chunk_t *this)
 {
-	TEST_ASSERT_NOT_NULL_MESSAGE(gs_mock_chunk_merge_expect, "Unexpected call to mm_chunk_merge.");
-	TEST_ASSERT_EQUAL_PTR(gs_mock_chunk_merge_expect->expect_this, this);
+	TEST_ASSERT_MESSAGE(mock_expect() == mock_call_type_merge,
+			    "Unexpected call to mm_chunk_merge.");
+	TEST_ASSERT_EQUAL_PTR(gs_mock_expect->call.merge.expect_this, this);
 
-	mock_chunk_merge_call_t *next = gs_mock_chunk_merge_expect->next;
-	unity_free(gs_mock_chunk_merge_expect);
-	gs_mock_chunk_merge_expect = next;
+	mock_pop();
 
 	gs_chunk_merge(this);
+}
+
+static bool mock_mm_validate_csize(uint16_t min_csize, uint32_t csize)
+{
+	TEST_ASSERT_MESSAGE(mock_expect() == mock_call_type_validate_csize,
+			    "Unexpected call to mm_validate_csize");
+	TEST_ASSERT_EQUAL_UINT16(gs_mock_expect->call.validate_csize.expect_min_csize, min_csize);
+	TEST_ASSERT_EQUAL_UINT32(gs_mock_expect->call.validate_csize.expect_csize, csize);
+	bool ret = gs_mock_expect->call.validate_csize.then_return;
+	mock_pop();
+	return ret;
+}
+
+static mock_call_type_e mock_expect(void)
+{
+	if (gs_mock_expect == NULL) {
+		return mock_call_type_none;
+	}
+	return gs_mock_expect->type;
+}
+
+static void mock_push(mock_call_t *new)
+{
+	if (gs_mock_expect == NULL) {
+		gs_mock_expect = new;
+	}
+
+	if (gs_mock_last != NULL) {
+		gs_mock_last->next = new;
+	}
+	gs_mock_last = new;
+}
+
+static void mock_pop(void)
+{
+	mock_call_t *next = gs_mock_expect->next;
+	unity_free(gs_mock_expect);
+	gs_mock_expect = next;
+	if (gs_mock_expect == NULL) {
+		gs_mock_last = NULL;
+	}
 }
 
 /* Definitions ---------------------------------------------------------------*/
 void mock_chunk_setup(void)
 {
-	gs_mock_find_first_free_ctx.expect_call = false;
-	gs_mock_chunk_split_ctx.expect_call = false;
-	gs_mock_chunk_merge_expect = NULL;
+	gs_mock_expect = NULL;
 
 	gs_chunk_split = mm_chunk_split;
 	gs_chunk_merge = mm_chunk_merge;
 	UT_PTR_SET(mm_find_first_free, mock_mm_find_first_free);
 	UT_PTR_SET(mm_chunk_merge, mock_mm_chunk_merge);
 	UT_PTR_SET(mm_chunk_split, mock_mm_chunk_split);
+	UT_PTR_SET(mm_validate_csize, mock_mm_validate_csize);
 }
 
 void mock_chunk_verify(void)
 {
-	TEST_ASSERT_FALSE_MESSAGE(gs_mock_find_first_free_ctx.expect_call,
-				  "A Call to mm_chunk_find_first_free was expected.");
-	TEST_ASSERT_FALSE_MESSAGE(gs_mock_chunk_split_ctx.expect_call,
-				  "A Call to mm_chunk_split was expected.");
-	TEST_ASSERT_NULL_MESSAGE(gs_mock_chunk_merge_expect,
-				  "A Call to mm_chunk_merge was expected.");
+	TEST_ASSERT_NULL_MESSAGE(gs_mock_expect,
+				  "Calls were still expected");
 }
 
 void mock_mm_find_first_free_ExpectAndReturn(uint16_t wanted_csize, mm_chunk_t *ret)
 {
-	gs_mock_find_first_free_ctx.expect_call = true;
-	gs_mock_find_first_free_ctx.expect_wanted_csize = wanted_csize;
-	gs_mock_find_first_free_ctx.then_return = ret;
+	mock_call_t *new = unity_malloc(sizeof(mock_call_t));
+	if (new == NULL) {
+		die("expect init failure");
+	}
+	new->type = mock_call_type_find_first_free;
+	new->call.find_first_free.expect_csize = wanted_csize;
+	new->call.find_first_free.then_return = ret;
+	new->next = NULL;
+
+	mock_push(new);
 }
 
 void mock_mm_chunk_split_ExpectAndReturn(mm_chunk_t *this, uint16_t csize, bool return_null)
 {
-	gs_mock_chunk_split_ctx.expect_call = true;
-	gs_mock_chunk_split_ctx.expect_this = this;
-	gs_mock_chunk_split_ctx.expect_csize = csize;
-	gs_mock_chunk_split_ctx.return_null = return_null;
+	mock_call_t *new = unity_malloc(sizeof(mock_call_t));
+	if (new == NULL) {
+		die("expect init failure");
+	}
+	new->type = mock_call_type_split;
+	new->call.split.expect_this = this;
+	new->call.split.expect_csize = csize;
+	new->call.split.then_return_null = return_null;
+	new->next = NULL;
+
+	mock_push(new);
 }
 
 void mock_mm_chunk_merge_Expect(mm_chunk_t *this)
 {
-	mock_chunk_merge_call_t *new = unity_malloc(sizeof(mock_chunk_merge_call_t));
+	mock_call_t *new = unity_malloc(sizeof(mock_call_t));
 	if (new == NULL) {
 		die("expect init failure");
 	}
-	new->expect_this = this;
+	new->type = mock_call_type_merge;
+	new->call.merge.expect_this = this;
 	new->next = NULL;
 
-	if (gs_mock_chunk_merge_expect == NULL) {
-		gs_mock_chunk_merge_expect = new;
-	} else {
-		mock_chunk_merge_call_t *last = gs_mock_chunk_merge_expect;
-		while (last->next != NULL) {
-			last = last->next;
-		}
-		last->next = new;
+	mock_push(new);
+}
+
+void mock_mm_validate_csize_ExpectAndReturn(uint16_t min_csize, uint32_t csize, bool then_return)
+{
+	mock_call_t *new = unity_malloc(sizeof(mock_call_t));
+	if (new == NULL) {
+		die("expect init failure");
 	}
+	new->type = mock_call_type_validate_csize;
+	new->call.validate_csize.expect_min_csize = min_csize;
+	new->call.validate_csize.expect_csize = csize;
+	new->call.validate_csize.then_return = then_return;
+	new->next = NULL;
+
+	mock_push(new);
 }

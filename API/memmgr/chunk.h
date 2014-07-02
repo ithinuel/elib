@@ -51,6 +51,8 @@ typedef mm_chunk_t *	(*mm_find_first_free_f)		(uint16_t wanted_csize);
 typedef void		(*mm_chunk_merge_f)		(mm_chunk_t *this);
 typedef mm_chunk_t *	(*mm_chunk_split_f)		(mm_chunk_t *this,
 						 	 uint16_t csize);
+typedef bool		(*mm_validate_csize_f)		(uint16_t min_csize,
+							 uint32_t wanted_csize);
 
 /* Functions prototypes ------------------------------------------------------*/
 void			mm_chunk_boundary_set	(mm_chunk_t *first,
@@ -70,6 +72,9 @@ void			mm_chunk_guard_set	(mm_chunk_t *this,
 						 uint32_t offset);
 uint16_t		mm_chunk_xorsum		(mm_chunk_t *this);
 void			mm_chunk_validate	(mm_chunk_t *this);
+bool			mm_chunk_is_available	(mm_chunk_t *this);
+uint16_t		mm_chunk_available_csize(mm_chunk_t *this);
+
 MOCKABLE mm_chunk_merge_f mm_chunk_merge;
 MOCKABLE mm_chunk_split_f mm_chunk_split;
 
@@ -84,5 +89,6 @@ void			mm_chunk_info		(mm_cinfo_t *infos,
 uint32_t 		mm_to_csize		(uint32_t size);
 uint16_t		mm_min_csize		(void);
 uint16_t		mm_header_csize		(void);
+MOCKABLE mm_validate_csize_f mm_validate_csize;
 
 #endif

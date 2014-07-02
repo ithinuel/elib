@@ -28,5 +28,8 @@ void		mock_mm_chunk_split_ExpectAndReturn	(mm_chunk_t *this,
 							 uint16_t csize,
 							 bool do_ret);
 void		mock_mm_chunk_merge_Expect		(mm_chunk_t *this);
+void		mock_mm_validate_csize_ExpectAndReturn	(uint16_t min_csize,
+							 uint32_t csize,
+							 bool then_return);
 
 #endif

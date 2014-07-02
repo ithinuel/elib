@@ -41,6 +41,8 @@ static void		mm_chunk_merge_impl		(mm_chunk_t *this);
 static mm_chunk_t *	mm_chunk_split_impl		(mm_chunk_t *this,
 							 uint16_t csize);
 static mm_chunk_t *	mm_find_first_free_impl		(uint16_t wanted_csize);
+static bool		mm_validate_csize_impl		(uint16_t min_csize,
+							 uint32_t csize);
 
 /* Variables -----------------------------------------------------------------*/
 static mm_boundary_t gs_chunk_boundary = {NULL, NULL};
@@ -48,6 +50,7 @@ static mm_boundary_t gs_chunk_boundary = {NULL, NULL};
 MOCKABLE mm_find_first_free_f mm_find_first_free = mm_find_first_free_impl;
 MOCKABLE mm_chunk_merge_f mm_chunk_merge = mm_chunk_merge_impl;
 MOCKABLE mm_chunk_split_f mm_chunk_split = mm_chunk_split_impl;
+MOCKABLE mm_validate_csize_f mm_validate_csize = mm_validate_csize_impl;
 
 /* Private Functions definitions ---------------------------------------------*/
 static uint32_t mm_to_aligned_csize(uint32_t size)
@@ -130,6 +133,11 @@ static mm_chunk_t *mm_find_first_free_impl(uint16_t wanted_csize)
 	}
 
 	return chnk;
+}
+
+static bool mm_validate_csize_impl(uint16_t min_csize, uint32_t csize)
+{
+	return (min_csize <= csize) && (csize <= CSIZE_MAX);
 }
 
 /* Functions' definitions ----------------------------------------------------*/
@@ -237,6 +245,19 @@ void mm_chunk_validate(mm_chunk_t *this)
 	}
 }
 
+bool mm_chunk_is_available(mm_chunk_t *this)
+{
+	return (this != NULL) && (!this->allocated);
+}
+
+uint16_t mm_chunk_available_csize(mm_chunk_t *this)
+{
+	if (!mm_chunk_is_available(this)) {
+		return 0;
+	}
+	return this->csize;
+}
+
 void *mm_toptr(mm_chunk_t *this)
 {
 	void *ptr = this;
@@ -289,4 +310,3 @@ uint16_t mm_header_csize(void)
 {
 	return mm_to_aligned_csize(sizeof(mm_chunk_t));
 }
-

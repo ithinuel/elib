@@ -38,8 +38,6 @@ typedef struct
 static void			mm_lock			(void);
 static void			mm_unlock		(void);
 
-static bool			mm_is_available		(mm_chunk_t *chnk);
-
 static void *			mm_alloc_impl		(uint32_t size);
 static void *			mm_zalloc_impl		(uint32_t size);
 static void *			mm_calloc_impl		(uint32_t n,
@@ -72,11 +70,6 @@ static void mm_unlock(void)
 	}
 }
 
-static bool mm_is_available(mm_chunk_t *chnk)
-{
-	return (chnk != NULL) && (!chnk->allocated);
-}
-
 static void *mm_alloc_impl(uint32_t size)
 {
 	int32_t wanted_csize = 0;
@@ -97,7 +90,7 @@ static void *mm_alloc_impl(uint32_t size)
 		mm_chunk_t *new = mm_chunk_split(chnk, wanted_csize);
 		if (new != NULL) {
 			mm_chunk_t *next = mm_chunk_next_get(new);
-			if (mm_is_available(next)){
+			if (mm_chunk_is_available(next)){
 				mm_chunk_merge(new);
 			}
 		}
@@ -152,9 +145,10 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	if (wanted_csize > CSIZE_MAX) {
 		return NULL;
 	}
-	mm_lock();
+
 	if (old_ptr == NULL) {
 		new_ptr = mm_alloc_impl(size);
+		mm_lock();
 		this = mm_tochunk(new_ptr);
 
 		this->allocator = __builtin_return_address(1);
@@ -163,21 +157,23 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 		return new_ptr;
 	}
 
+	mm_lock();
 	this = mm_tochunk(old_ptr);
 
 	if (wanted_csize > this->csize) {
 		mm_chunk_t *next = mm_chunk_next_get(this);
 		mm_chunk_t *prev = mm_chunk_prev_get(this);
-		bool next_available = mm_is_available(next);
-		bool prev_available = mm_is_available(prev);
-		if (next_available && ((this->csize + next->csize) >= wanted_csize)) {
+
+		uint32_t prev_csize = mm_chunk_available_csize(prev);
+		uint32_t next_csize = mm_chunk_available_csize(next);
+
+		if (mm_validate_csize(wanted_csize, this->csize + next_csize)) {
 			mm_chunk_merge(this);
-		} else if (prev_available && ((prev->csize + this->csize) >= wanted_csize)) {
+		} else if (mm_validate_csize(wanted_csize, prev_csize + this->csize)) {
 			mm_chunk_merge(prev);
 			this = prev;
 			old_ptr = mm_toptr(this);
-		} else if (prev_available && next_available &&
-			   ((prev->csize + this->csize + next->csize) >= wanted_csize)) {
+		} else if (mm_validate_csize(wanted_csize, prev->csize + this->csize + next->csize)) {
 			mm_chunk_merge(this);
 			mm_chunk_merge(prev);
 			this = prev;
@@ -224,11 +220,11 @@ static void mm_free_impl(void *ptr)
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
 		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);
-		if (mm_is_available(sibbling)) {
+		if (mm_chunk_is_available(sibbling)) {
 			mm_chunk_merge(chnk);
 		}
 		sibbling = mm_chunk_prev_get(chnk);
-		if (mm_is_available(sibbling)) {
+		if (mm_chunk_is_available(sibbling)) {
 			mm_chunk_merge(sibbling);
 		}
 	}
