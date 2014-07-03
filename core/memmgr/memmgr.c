@@ -217,6 +217,7 @@ static void mm_free_impl(void *ptr)
 
 		chnk->allocated = false;
 		chnk->allocator = NULL;
+		mm_chunk_guard_set(chnk, 0);
 		chnk->xorsum = mm_chunk_xorsum(chnk);
 
 		mm_chunk_t *sibbling = mm_chunk_next_get(chnk);

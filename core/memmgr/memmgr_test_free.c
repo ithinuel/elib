@@ -111,11 +111,13 @@ TEST(memmgr_free, free_cant_merge_prev_if_allocated)
 TEST(memmgr_free, free_)
 {
 	chunk_test_allocated_set(g_first, true);
+	chunk_test_fill_with_prepare(g_first, 'A');
 	mock_mm_chunk_merge_Expect(g_first);
 	void *ptr = mm_toptr(g_first);
 	mm_free(ptr);
 	mm_chunk_validate(g_first);
 	TEST_ASSERT_FALSE(g_first->allocated);
+	TEST_ASSERT_EQUAL_UINT32(0, g_first->guard_offset);
 }
 
 TEST(memmgr_free, double_free_leads_to_death)
