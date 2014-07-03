@@ -173,7 +173,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 			mm_chunk_merge(prev);
 			this = prev;
 			old_ptr = mm_toptr(this);
-		} else if (mm_validate_csize(wanted_csize, prev->csize + this->csize + next->csize)) {
+		} else if (mm_validate_csize(wanted_csize, prev_csize + this->csize + next_csize)) {
 			mm_chunk_merge(this);
 			mm_chunk_merge(prev);
 			this = prev;

@@ -193,8 +193,8 @@ uint32_t mm_guard_size(mm_chunk_t *this)
 bool mm_chunk_guard_get(mm_chunk_t *this)
 {
 	uint8_t *ptr = mm_toptr(this) + this->guard_offset;
-	uint32_t size = mm_guard_size(this);
-	for (uint32_t i = 0; i < size; i++) {
+
+	for (uint32_t i = 0; i < (MM_CFG_GUARD_SIZE*MM_CFG_ALIGNMENT); i++) {
 		if (ptr[i] != MM_GUARD_PAD) {
 			return false;
 		}

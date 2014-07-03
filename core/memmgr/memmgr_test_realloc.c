@@ -301,18 +301,25 @@ TEST(memmgr_realloc, grow_a_lot_cant_eat)
 
 TEST(memmgr_realloc, grow_a_lot_cant_eat_but_malloc_failed)
 {
+	chunk_test_state_t a_expect[] = {{30, true}, {20, true}, {20, true}, {186, false}};
+
+	chunk_test_allocated_set(g_first, true);
+	mm_chunk_t *next= mm_chunk_next_get(mm_tochunk(gs_ptr));
+	chunk_test_allocated_set(next, true);
+	
 	uint32_t csize = 30;
 	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
 
 	mock_memmgr_setup();
 
-	mock_mm_validate_csize_ExpectAndReturn(csize, 40, false);
-	mock_mm_validate_csize_ExpectAndReturn(csize, 50, false);
-	mock_mm_validate_csize_ExpectAndReturn(csize, 70, false);
+	mock_mm_validate_csize_ExpectAndReturn(csize, 20, false);
+	mock_mm_validate_csize_ExpectAndReturn(csize, 20, false);
+	mock_mm_validate_csize_ExpectAndReturn(csize, 20, false);
 
 	mock_mm_alloc_ExpectAndReturn(new_payload, NULL);
 
 	TEST_ASSERT_NULL(mm_realloc(gs_ptr, new_payload));
 
 	mock_memmgr_verify();
+	chunk_test_verify(a_expect, 4);
 }

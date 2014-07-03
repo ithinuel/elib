@@ -91,7 +91,7 @@ TEST(mm_chunk_validate, validate_out_of_bound)
 	die_Expect("MM: out of bound");
 	VERIFY_DIE_START
 	
-	mm_chunk_validate((mm_chunk_t *)MM_CFG_ALIGNMENT);
+	mm_chunk_validate((mm_chunk_t *)(gs_raw-MM_CFG_ALIGNMENT));
 	
 	VERIFY_DIE_END
 	die_Verify();
@@ -110,7 +110,7 @@ TEST(mm_chunk_validate, validate_overflow)
 	die_Expect("MM: overflowed");
 	VERIFY_DIE_START
 
-	memset(gs_raw + 512, 0, 512);
+	memset(mm_toptr(gs_chnk), 0, 1);
 	mm_chunk_validate(gs_chnk);
 
 	VERIFY_DIE_END
