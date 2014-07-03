@@ -32,6 +32,8 @@
 /* helpers -------------------------------------------------------------------*/
 
 /* functions' prototypes */
+void *			unity_malloc				(size_t size);
+void			unity_free				(void *ptr);
 
 /* variables */
 
@@ -60,6 +62,7 @@ TEST_GROUP_RUNNER(mm_chunk)
 	RUN_TEST_CASE(mm_chunk, info);
 
 	RUN_TEST_CASE(mm_chunk, valid_between_included_wanted_csize_and_csize_max);
+	RUN_TEST_CASE(mm_chunk, when_not_available_then_it_should_return_0);
 }
 TEST_SETUP(mm_chunk)
 {
@@ -169,8 +172,7 @@ TEST(mm_chunk, merge_alloc_alloc)
 
 TEST(mm_chunk, merge_bigblocks)
 {
-	mock_memmgr_setup();
-	mm_chunk_t *gigablock = (mm_chunk_t *)mm_alloc(2*CSIZE_MAX*MM_CFG_ALIGNMENT);
+	mm_chunk_t *gigablock = (mm_chunk_t *)unity_malloc(2*CSIZE_MAX*MM_CFG_ALIGNMENT);
 
 	UT_PTR_SET(g_first, gigablock);
 
@@ -184,7 +186,7 @@ TEST(mm_chunk, merge_bigblocks)
 	mm_chunk_merge(g_first);
 	chunk_test_verify(a_expect, 2);
 
-	mm_free(gigablock);
+	unity_free(gigablock);
 }
 
 TEST(mm_chunk, split)
@@ -263,4 +265,19 @@ TEST(mm_chunk, valid_between_included_wanted_csize_and_csize_max)
 	TEST_ASSERT_TRUE(mm_validate_csize(CSIZE_MAX, CSIZE_MAX));
 	TEST_ASSERT_FALSE(mm_validate_csize(CSIZE_MAX, 10));
 	TEST_ASSERT_FALSE(mm_validate_csize(CSIZE_MAX, CSIZE_MAX * CSIZE_MAX));
+}
+
+TEST(mm_chunk, when_not_available_then_it_should_return_0)
+{
+	chunk_test_state_t a_state[] = {{64, true}, {64, false}, {128, true}};
+	chunk_test_prepare(a_state, 3);
+
+	mm_chunk_t *first = g_first;
+	mm_chunk_t *second = mm_chunk_next_get(g_first);
+	mm_chunk_t *third = mm_chunk_next_get(second);
+
+	TEST_ASSERT_EQUAL_UINT16(0, mm_chunk_available_csize(NULL));
+	TEST_ASSERT_EQUAL_UINT16(0, mm_chunk_available_csize(first));
+	TEST_ASSERT_EQUAL_UINT16(64, mm_chunk_available_csize(second));
+	TEST_ASSERT_EQUAL_UINT16(0, mm_chunk_available_csize(third));
 }

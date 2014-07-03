@@ -19,14 +19,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "unity_fixture.h"
 #include "common/common.h"
+#include "memmgr/chunk.h"
+#include "memmgr_conf.h"
+#include "os/memmgr.h"
 #include "tests/common_mock.h"
 #include "tests/chunk_mock.h"
 #include "tests/chunk_test_tools.h"
-#include "memmgr/chunk.h"
-#include "os/memmgr.h"
-#include "memmgr_conf.h"
+#include "tests/memmgr_mock.h"
+#include "unity_fixture.h"
 
 /* helpers -------------------------------------------------------------------*/
 static uint8_t *gs_ptr = NULL;
@@ -59,6 +60,7 @@ TEST_GROUP_RUNNER(memmgr_realloc)
 	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_eat_prev);
 	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_eat_both);
 	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_cant_eat);
+	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_cant_eat_but_malloc_failed);
 }
 
 TEST_SETUP(memmgr_realloc)
@@ -268,21 +270,49 @@ TEST(memmgr_realloc, grow_a_lot_eat_both)
 TEST(memmgr_realloc, grow_a_lot_cant_eat)
 {
 	uint32_t csize = 30;
+	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
+
+	mock_memmgr_setup();
+
 	mm_chunk_t *chnk = mm_tochunk(gs_ptr);
-	mm_chunk_t *prev = mm_chunk_prev_get(chnk);
-	mm_chunk_t *new = mm_compute_next(prev, csize);
+	mm_chunk_t *next = mm_chunk_next_get(chnk);
+	mm_chunk_t *next_next = mm_chunk_next_get(next);
+	void *expect_ptr = mm_toptr(next_next);
+
+	chunk_test_allocated_set(next_next, true);
+	mm_chunk_guard_set(next_next, new_payload);
+	next_next->xorsum = mm_chunk_xorsum(next_next);
 
 	mock_mm_validate_csize_ExpectAndReturn(csize, 40, false);
 	mock_mm_validate_csize_ExpectAndReturn(csize, 50, false);
 	mock_mm_validate_csize_ExpectAndReturn(csize, 70, false);
 
-	mock_mm_chunk_split_ExpectAndReturn(prev, csize, false);
-	mock_mm_chunk_merge_Expect(new);
-	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
+	mock_mm_alloc_ExpectAndReturn(new_payload, expect_ptr);
+	mock_mm_free_Expect(gs_ptr);
 
 	uint8_t *ptr = mm_realloc(gs_ptr, new_payload);
-	TEST_ASSERT_EQUAL_PTR(mm_toptr(prev), ptr);
+	TEST_ASSERT_EQUAL_PTR(expect_ptr, ptr);
 	memset(ptr, 'A', new_payload);
 	gs_ptr = ptr;
 	gs_size = new_payload;
+
+	mock_memmgr_verify();
+}
+
+TEST(memmgr_realloc, grow_a_lot_cant_eat_but_malloc_failed)
+{
+	uint32_t csize = 30;
+	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
+
+	mock_memmgr_setup();
+
+	mock_mm_validate_csize_ExpectAndReturn(csize, 40, false);
+	mock_mm_validate_csize_ExpectAndReturn(csize, 50, false);
+	mock_mm_validate_csize_ExpectAndReturn(csize, 70, false);
+
+	mock_mm_alloc_ExpectAndReturn(new_payload, NULL);
+
+	TEST_ASSERT_NULL(mm_realloc(gs_ptr, new_payload));
+
+	mock_memmgr_verify();
 }

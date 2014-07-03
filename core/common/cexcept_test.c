@@ -20,7 +20,7 @@
 #include "common/cexcept.h"
 
 #include "tests/common_mock.h"
-#include "tests/memmgr_mock.h"
+#include "tests/memmgr_unity.h"
 
 /* Helper functions and variables --------------------------------------------*/
 static bool did_try_start = false;
@@ -72,7 +72,7 @@ TEST_GROUP_RUNNER(cexcept) {
 
 TEST_SETUP(cexcept)
 {
-	mock_memmgr_setup();
+	unity_mock_setup();
 	did_try_start = false;
 	did_try_end = false;
 	did_catch_start = false;

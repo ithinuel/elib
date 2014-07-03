@@ -21,11 +21,6 @@
 #include <stdint.h>
 
 /* Prototypes ----------------------------------------------------------------*/
-void			mock_memmgr_setup		(void);
-void			mock_mm_alloc_Expect		(uint32_t size);
-void			mock_mm_alloc_ExpectAndReturn	(uint32_t size,
-							 void *ret);
-void			mock_mm_free_Expect		(void *ptr);
-void			mock_memmgr_verify		(void);
+void			unity_mock_setup		(void);
 
 #endif

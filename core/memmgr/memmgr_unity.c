@@ -14,17 +14,28 @@
 	limitations under the License.
 */
 
-#include <stdlib.h>
+/* Includes ------------------------------------------------------------------*/
+#include <stddef.h>
 #include <string.h>
-#include "unity_fixture.h"
 #include "os/memmgr.h"
+#include "tests/memmgr_mock.h"
+#include "unity_fixture.h"
 
-/* Those declaration would be better in unity_fixture_malloc_overrides or unity_fixture */
+/* Macro definitions ---------------------------------------------------------*/
+
+/* Type definitions ----------------------------------------------------------*/
+
+/* Prototypes ----------------------------------------------------------------*/
 void * unity_malloc(size_t);
 void * unity_calloc(size_t, size_t);
 void * unity_realloc(void *, size_t);
 void unity_free(void*);
 
+static void *mm_zalloc_mock(uint32_t size);
+
+/* Variables -----------------------------------------------------------------*/
+
+/* Private Functions definitions ---------------------------------------------*/
 static void *mm_zalloc_mock(uint32_t size)
 {
 	void *ptr = malloc(size);
@@ -34,7 +45,8 @@ static void *mm_zalloc_mock(uint32_t size)
 	return ptr;
 }
 
-void mock_memmgr_setup(void)
+/* Functions definitions -----------------------------------------------------*/
+void unity_mock_setup(void)
 {
 	UT_PTR_SET(mm_alloc, unity_malloc);
 	UT_PTR_SET(mm_zalloc, mm_zalloc_mock);

@@ -75,6 +75,7 @@ static bool		mock_mm_validate_csize			(uint16_t min_csize,
 static mock_call_type_e mock_expect				(void);
 static void		mock_push				(mock_call_t *new);
 static void		mock_pop				(void);
+static void		mock_clean				(void);
 
 /* Variables -----------------------------------------------------------------*/
 static mock_call_t *gs_mock_expect = NULL;
@@ -163,10 +164,17 @@ static void mock_pop(void)
 	}
 }
 
+static void mock_clean(void)
+{
+	while (gs_mock_expect != NULL) {
+		mock_pop();
+	}
+}
+
 /* Definitions ---------------------------------------------------------------*/
 void mock_chunk_setup(void)
 {
-	gs_mock_expect = NULL;
+	mock_clean();
 
 	gs_chunk_split = mm_chunk_split;
 	gs_chunk_merge = mm_chunk_merge;

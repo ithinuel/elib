@@ -19,7 +19,7 @@
 #include "unity_fixture.h"
 #include "common/object.h"
 #include "os/memmgr.h"
-#include "tests/memmgr_mock.h"
+#include "tests/memmgr_unity.h"
 
 /* Test helpers --------------------------------------------------------------*/
 /* functions's declarations */
@@ -63,7 +63,7 @@ TEST_GROUP_RUNNER(object)
 
 TEST_SETUP(object)
 {
-	mock_memmgr_setup();
+	unity_mock_setup();
 	gs_obj = mm_zalloc(sizeof(object_t));
 	gs_obj->ops = &gs_obj_opts;
 }

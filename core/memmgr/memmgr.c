@@ -136,7 +136,7 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 
 	if (size == 0) {
 		if (old_ptr != NULL) {
-			mm_free_impl(old_ptr);
+			mm_free(old_ptr);
 		}
 		return NULL;
 	}
@@ -182,11 +182,11 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	}
 
 	if (wanted_csize > this->csize) {
-		new_ptr = mm_alloc_impl(size);
+		new_ptr = mm_alloc(size);
 		if (new_ptr != NULL) {
 			memcpy(new_ptr, old_ptr, umin(this->guard_offset, size));
 			this = mm_tochunk(new_ptr);
-			mm_free_impl(old_ptr);
+			mm_free(old_ptr);
 		}
 	} else {
 		mm_chunk_t *new = mm_chunk_split(this, wanted_csize);
