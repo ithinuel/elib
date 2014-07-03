@@ -34,6 +34,9 @@
 static void *		mock_zalloc		(uint32_t size);
 static void		mock_zalloc_Setup	(void);
 static void		mock_Verify		(void);
+static void		eval_mm_info		(mm_info_t *expect,
+						 mm_info_t *val,
+						 uint32_t len);
 
 static uint8_t gs_heap[1024*1024];
 
@@ -70,6 +73,19 @@ static void mock_Verify(void)
 	TEST_ASSERT_FALSE_MESSAGE(gs_mock_zalloc.expect_call, "Missing call to mm_zalloc");
 }
 
+static void eval_mm_info(mm_info_t *expect, mm_info_t *val, uint32_t len)
+{
+	uint32_t i = 0;
+	for(; i < len; i++)
+	{
+		TEST_ASSERT_EQUAL_UINT16(expect[i].csize, val->csize);
+		TEST_ASSERT_EQUAL_UINT32(expect[i].size, val->size);
+		TEST_ASSERT_EQUAL(expect[i].allocated, val->allocated);
+		val++;
+	}
+	TEST_ASSERT_EQUAL_UINT32(i, len);
+}
+
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(memmgr);
 
@@ -90,6 +106,7 @@ TEST_GROUP_RUNNER(memmgr)
 
 	RUN_TEST_CASE(memmgr, init);
 	RUN_TEST_CASE(memmgr, check);
+	RUN_TEST_CASE(memmgr, info)
 }
 
 TEST_SETUP(memmgr)
@@ -182,4 +199,43 @@ TEST(memmgr, check)
 {
 	mm_init(gs_heap, 1024*1024);
 	mm_check();
+}
+
+TEST(memmgr, info)
+{
+	mm_init(gs_heap, 1024*1024);
+
+	chunk_test_allocated_set(g_first, true);
+	chunk_test_fill_with_prepare(g_first, 'A');
+	mm_info_t a_expect[] = {
+			{
+				.size = 16,
+				.csize = 9,
+				.allocated = true,
+				.allocator = NULL
+			},
+			{
+				.size = 192,
+				.csize = 53,
+				.allocated = true,
+				.allocator = NULL
+			},
+			{
+				.size = 0,
+				.csize = 32705,
+				.allocated = false,
+				.allocator = NULL
+			},
+			{
+				.size = 0,
+				.csize = 32767,
+				.allocated = false,
+				.allocator = NULL
+			},
+			{
+				.csize = 0
+			}
+		};
+	mm_info_t *infos = mm_info_get();
+	eval_mm_info(a_expect, infos, 4);
 }

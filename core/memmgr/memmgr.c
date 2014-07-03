@@ -279,25 +279,25 @@ void mm_allocator_set(void *ptr, void *lr)
 	mm_unlock();
 }
 
-//mm_info_t *mm_info_get(void)
-//{
-//	mm_lock();
-//	mm_info_t *infos = mm_calloc(mm_chunk_count() + 2, sizeof(mm_info_t));
-//	if (infos != NULL) {
-//		mm_info_t *it = infos;
-//		mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
-//		mm_chunk_validate(chnk);
-//		while (chnk != NULL) {
-//			it->allocated = chnk->allocated;
-//			it->allocator = chnk->allocator;
-//			it->csize = chnk->csize;
-//			it->size = chnk->guard_offset;
-//
-//			it++;
-//			chnk = mm_chunk_next_get(chnk);
-//		}
-//	}
-//	mm_unlock();
-//	return infos;
-//}
+mm_info_t *mm_info_get(void)
+{
+	mm_lock();
+	mm_info_t *infos = mm_calloc(mm_chunk_count() + 2, sizeof(mm_info_t));
+	if (infos != NULL) {
+		mm_info_t *it = infos;
+		mm_chunk_t *chnk = (mm_chunk_t *)gs_memmgr.heap;
+		mm_chunk_validate(chnk);
+		while (chnk != NULL) {
+			it->allocated = chnk->allocated;
+			it->allocator = chnk->allocator;
+			it->csize = chnk->csize;
+			it->size = chnk->guard_offset;
+
+			it++;
+			chnk = mm_chunk_next_get(chnk);
+		}
+	}
+	mm_unlock();
+	return infos;
+}
 
