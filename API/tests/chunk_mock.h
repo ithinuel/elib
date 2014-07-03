@@ -14,8 +14,22 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_MOCK_MEMMGR_H__
-#define __TESTS_MOCK_MEMMGR_H__
-void mock_memmgr_setup(void);
+#ifndef __TESTS_CHUNK_MOCK_H__
+#define __TESTS_CHUNK_MOCK_H__
+
+#include <stdint.h>
+#include "memmgr/chunk.h"
+
+void		mock_chunk_setup			(void);
+void		mock_chunk_verify			(void);
+void		mock_mm_find_first_free_ExpectAndReturn	(uint16_t wanted_csize,
+							 mm_chunk_t *ret);
+void		mock_mm_chunk_split_ExpectAndReturn	(mm_chunk_t *this,
+							 uint16_t csize,
+							 bool do_ret);
+void		mock_mm_chunk_merge_Expect		(mm_chunk_t *this);
+void		mock_mm_validate_csize_ExpectAndReturn	(uint16_t min_csize,
+							 uint32_t csize,
+							 bool then_return);
 
 #endif

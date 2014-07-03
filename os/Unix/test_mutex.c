@@ -16,7 +16,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "unity_fixture.h"
-#include "tests/mock_memmgr.h"
+#include "tests/memmgr_unity.h"
 #include "os/memmgr.h"
 #include "os/mutex.h"
 
@@ -33,7 +33,7 @@ TEST_GROUP_RUNNER(mutex)
 
 TEST_SETUP(mutex)
 {
-	mock_memmgr_setup();
+	unity_mock_setup();
 	gs_mtx = mutex_new(false, "unit_tests");
 
 }

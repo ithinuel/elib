@@ -23,3 +23,8 @@ uint32_t umin(uint32_t a, uint32_t b)
 {
 	return (a<b)? a : b;
 }
+
+char *bool_to_string(bool val)
+{
+	return val?"true":"false";
+}

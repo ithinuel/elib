@@ -17,11 +17,21 @@ CORE_DIR = core
 CORE_SRCS = \
 	$(CORE_DIR)/common/common.c \
 	$(CORE_DIR)/common/object.c \
-	$(CORE_DIR)/common/test_object.c \
+	$(CORE_DIR)/common/object_test.c \
 	$(CORE_DIR)/memmgr/memmgr.c \
-	$(CORE_DIR)/memmgr/test_memmgr.c \
+	$(CORE_DIR)/memmgr/memmgr_mock.c \
+	$(CORE_DIR)/memmgr/memmgr_unity.c \
+	$(CORE_DIR)/memmgr/memmgr_test.c \
+	$(CORE_DIR)/memmgr/memmgr_test_alloc.c \
+	$(CORE_DIR)/memmgr/memmgr_test_free.c \
+	$(CORE_DIR)/memmgr/memmgr_test_realloc.c \
+	$(CORE_DIR)/memmgr/chunk.c \
+	$(CORE_DIR)/memmgr/chunk_mock.c \
+	$(CORE_DIR)/memmgr/chunk_test.c \
+	$(CORE_DIR)/memmgr/chunk_test_tools.c \
+	$(CORE_DIR)/memmgr/chunk_test_validate.c \
 	$(CORE_DIR)/common/cexcept.c \
-	$(CORE_DIR)/common/test_cexcept.c
+	$(CORE_DIR)/common/cexcept_test.c
 	
 CORE_CFLAGS +=
 

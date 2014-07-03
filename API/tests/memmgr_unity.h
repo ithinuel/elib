@@ -14,24 +14,13 @@
 	limitations under the License.
 */
 
-#ifndef __COMMON_COMMON_H__
-#define __COMMON_COMMON_H__
+#ifndef __TESTS_MEMMGR_MOCK_H__
+#define __TESTS_MEMMGR_MOCK_H__
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
-#include <stdbool.h>
 
-/* Macros --------------------------------------------------------------------*/
-#define		base_of(ptr, type) \
-	(type *)((uintptr_t)ptr - __builtin_offsetof(type, base))
-
-/* Public functions ----------------------------------------------------------*/
-/**
- * Returns the lower from a or b.
- */
-uint32_t		umin			(uint32_t a,
-						 uint32_t b);
-char *			bool_to_string		(bool val);
-void			die			(const char *reason);
+/* Prototypes ----------------------------------------------------------------*/
+void			unity_mock_setup		(void);
 
 #endif

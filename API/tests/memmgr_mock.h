@@ -14,23 +14,18 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_TESTS_H__
-#define __TESTS_TESTS_H__
+#ifndef __TESTS_MEMMGR_MOCK_H__
+#define __TESTS_MEMMGR_MOCK_H__
 
 /* Includes ------------------------------------------------------------------*/
-#include <setjmp.h>
 #include <stdint.h>
 
-#define VERIFY_DIE_START \
-	if (setjmp(g_on_die)==0) {
-#define VERIFY_DIE_END \
-	}
-
-/* Public functions ----------------------------------------------------------*/
-void				die_Expect			(char *expected_cause);
-void				die_Verify			(void);
-
-/* Public variables ----------------------------------------------------------*/
-extern jmp_buf g_on_die;
+/* Prototypes ----------------------------------------------------------------*/
+void			mock_memmgr_setup		(void);
+void			mock_mm_alloc_Expect		(uint32_t size);
+void			mock_mm_alloc_ExpectAndReturn	(uint32_t size,
+							 void *ret);
+void			mock_mm_free_Expect		(void *ptr);
+void			mock_memmgr_verify		(void);
 
 #endif

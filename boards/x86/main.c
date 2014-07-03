@@ -18,13 +18,14 @@
 #include <stdbool.h>
 #include "unity_fixture.h"
 
-#include "tests/tests.h"
+#include "tests/common_mock.h"
 
 jmp_buf g_on_die;
 static char *gs_expected_cause = NULL;
 
 static void runAllTests()
 {
+	RUN_TEST_GROUP(mm_chunk);
 	RUN_TEST_GROUP(memmgr);
 	RUN_TEST_GROUP(cexcept);
 	RUN_TEST_GROUP(object);

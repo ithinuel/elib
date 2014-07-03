@@ -14,24 +14,23 @@
 	limitations under the License.
 */
 
-#ifndef __COMMON_COMMON_H__
-#define __COMMON_COMMON_H__
+#ifndef __TESTS_COMMON_MOCK_H__
+#define __TESTS_COMMON_MOCK_H__
 
 /* Includes ------------------------------------------------------------------*/
+#include <setjmp.h>
 #include <stdint.h>
-#include <stdbool.h>
 
-/* Macros --------------------------------------------------------------------*/
-#define		base_of(ptr, type) \
-	(type *)((uintptr_t)ptr - __builtin_offsetof(type, base))
+#define VERIFY_DIE_START \
+	if (setjmp(g_on_die)==0) {
+#define VERIFY_DIE_END \
+	}
 
 /* Public functions ----------------------------------------------------------*/
-/**
- * Returns the lower from a or b.
- */
-uint32_t		umin			(uint32_t a,
-						 uint32_t b);
-char *			bool_to_string		(bool val);
-void			die			(const char *reason);
+void				die_Expect			(char *expected_cause);
+void				die_Verify			(void);
+
+/* Public variables ----------------------------------------------------------*/
+extern jmp_buf g_on_die;
 
 #endif

@@ -24,7 +24,7 @@
 #include "common/mockable.h"
 
 /* macros --------------------------------------------------------------------*/
-#define UINT15_MAX		(32767)
+#define mm_allocator_update(this)	mm_allocator_set(this, __builtin_return_address(0))
 
 /* Public types --------------------------------------------------------------*/
 typedef void *		(* mm_alloc_f)			(uint32_t total_csize);
@@ -36,29 +36,39 @@ typedef void		(* mm_free_f)			(void *ptr);
 
 typedef struct
 {
-	uint32_t	size;
-	uint16_t	total_csize;
-	bool		allocated;
-	void *		allocator;
-} mm_stats_t;
+	uint32_t size;
+	uint16_t csize;
+	bool	 allocated;
+	void	 *allocator;
+} mm_info_t;
+
 
 /* Public functions ----------------------------------------------------------*/
 /**
  * Initialise the memory manager.
+ * @param	heap	Heap buffer.
+ *			Must be aligned according to MM_CFG_ALIGNMENT;
+ * @param	size	Heap buffer size in byte.
  */
-void			mm_init				(void);
+void			mm_init				(uint8_t *heap,
+							 uint32_t size);
 /**
  * Check heap integrity.
  */
 void			mm_check			(void);
+
 /**
  * Gives chunk number.
  * @return Integer.
  */
-uint32_t		mm_nb_chunk			(void);
-void			mm_chunk_info			(mm_stats_t *stats,
-							 uint32_t size);
-void			mm_allocator_set		(void *ptr);
+void			mm_allocator_set		(void *ptr,
+							 void *lr);
+
+/**
+ * Returns a table of chunk informations. The last one has an invalid length of 0.
+ * @return	Table of mm_info_t.
+ */
+mm_info_t *		mm_info_get			(void);
 
 MOCKABLE mm_alloc_f	mm_alloc;
 MOCKABLE mm_alloc_f	mm_zalloc;
