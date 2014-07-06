@@ -14,29 +14,27 @@
 	limitations under the License.
 */
 
-#ifndef __OS_SEMPHR_H__
-#define __OS_SEMPHR_H__
+#ifndef __OS_SPINLOCK_H__
+#define __OS_SPINLOCK_H__
 
 /* Public forward declarations -----------------------------------------------*/
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
 #include <stdint.h>
-#include "common/object.h"
 
 /* Public types --------------------------------------------------------------*/
 typedef struct {
-	object_t base;
-} semphr_t;
+	volatile bool	is_locked;
+} spinlock_t;
 
 /* Public macros -------------------------------------------------------------*/
 /* Public variables ----------------------------------------------------------*/
 /* Public prototypes ---------------------------------------------------------*/
-semphr_t *		semphr_new			(uint32_t max_cnt,
-							 uint32_t available_cnt,
-							 const char *name);
-bool			semphr_take			(semphr_t *this,
-							 int32_t ms);
-void			semphr_give			(semphr_t *this);
+spinlock_t		spinlock_init			(bool is_locked);
+bool			spinlock_lock			(spinlock_t *this,
+							 int32_t max_delay,
+							 int32_t spin_delay);
+void			spinlock_unlock			(spinlock_t *this);
 
 
 #endif
