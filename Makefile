@@ -13,9 +13,11 @@
 #	limitations under the License.
 
 .PHONY: all clean_all tests clean_tests
-all: tests
+all: coverage
 clean_all: clean_tests
 
+coverage:
+	@$(MAKE) --no-print-directory -f API/common.mk PROJECT=projects/tests/tests.mk coverage
 tests:
 	@$(MAKE) --no-print-directory -f API/common.mk PROJECT=projects/tests/tests.mk tests
 	
