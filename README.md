@@ -5,7 +5,7 @@ Embedded library from memory manager to hi-level services.
 Everything is in the title.
 
 some flags :  
-[![Build Status](https://travis-ci.org/ithinuel/elib.svg?branch=master)](https://travis-ci.org/ithinuel/elib) [![Coverage Status](https://coveralls.io/repos/ithinuel/elib/badge.png)](https://coveralls.io/r/ithinuel/elib)
+[![Build Status](https://travis-ci.org/ithinuel/elib.svg?branch=master)](https://travis-ci.org/ithinuel/elib) [![Coverage Status](https://coveralls.io/repos/ithinuel/elib/badge.png?branch=master)](https://coveralls.io/r/ithinuel/elib?branch=master)
 
 
 Folder hierarchy
