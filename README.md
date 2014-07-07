@@ -4,6 +4,10 @@ elib
 Embedded library from memory manager to hi-level services.
 Everything is in the title.
 
+some flags :  
+[![Build Status](https://travis-ci.org/ithinuel/elib.svg?branch=master)](https://travis-ci.org/ithinuel/elib)
+
+
 Folder hierarchy
 ================
 - API : all public .h
