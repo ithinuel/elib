@@ -1,3 +1,11 @@
 language: c
+
 compiler: gcc
+
+before_install:
+    - sudo pip install cpp-coveralls
+
 script: make tests
+
+after_success:
+    - coveralls
