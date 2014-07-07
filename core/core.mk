@@ -31,7 +31,10 @@ CORE_SRCS = \
 	$(CORE_DIR)/memmgr/chunk_test_tools.c \
 	$(CORE_DIR)/memmgr/chunk_test_validate.c \
 	$(CORE_DIR)/common/cexcept.c \
-	$(CORE_DIR)/common/cexcept_test.c
+	$(CORE_DIR)/common/cexcept_test.c \
+	$(CORE_DIR)/os/spinlock.c \
+	$(CORE_DIR)/os/spinlock_test.c \
+	$(CORE_DIR)/os/task_mock.c
 	
 CORE_CFLAGS +=
 

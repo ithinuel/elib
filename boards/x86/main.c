@@ -30,6 +30,7 @@ static void runAllTests()
 	RUN_TEST_GROUP(cexcept);
 	RUN_TEST_GROUP(object);
 	RUN_TEST_GROUP(mutex);
+	RUN_TEST_GROUP(spinlock);
 }
 
 void die(const char *reason)

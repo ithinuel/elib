@@ -20,11 +20,21 @@
 /* Public forward declarations -----------------------------------------------*/
 /* Includes ------------------------------------------------------------------*/
 #include "common/cexcept.h"
+#include "common/mockable.h"
 
 /* Public types --------------------------------------------------------------*/
+typedef void		(*task_delay_ms_f)		(int32_t ms);
+
 /* Public macros -------------------------------------------------------------*/
 /* Public variables ----------------------------------------------------------*/
 /* Public prototypes ---------------------------------------------------------*/
+
+/**
+ * Block current task for ms.
+ * @param ms	period in ms.
+ */
+MOCKABLE task_delay_ms_f		task_delay_ms;
+
 cexcept_ctx_t *		task_cexcept_get_ctx		(void);
 void			task_cexcept_set_ctx		(cexcept_ctx_t *);
 

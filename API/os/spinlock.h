@@ -28,9 +28,10 @@ typedef struct {
 } spinlock_t;
 
 /* Public macros -------------------------------------------------------------*/
+#define	spinlock_declare(var_name)		spinlock_t var_name = { .is_locked = false }
+
 /* Public variables ----------------------------------------------------------*/
 /* Public prototypes ---------------------------------------------------------*/
-spinlock_t		spinlock_init			(bool is_locked);
 bool			spinlock_lock			(spinlock_t *this,
 							 int32_t max_delay,
 							 int32_t spin_delay);
