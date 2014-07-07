@@ -238,4 +238,9 @@ TEST(memmgr, info)
 		};
 	mm_info_t *infos = mm_info_get();
 	eval_mm_info(a_expect, infos, 4);
+
+	mock_memmgr_setup();
+	mock_mm_alloc_ExpectAndReturn(208, NULL);
+	TEST_ASSERT_NULL(mm_info_get());
+	mock_memmgr_verify();
 }
