@@ -55,6 +55,7 @@ TEST_GROUP_RUNNER(memmgr_realloc)
 	RUN_TEST_CASE(memmgr_realloc, same_csize);
 	RUN_TEST_CASE(memmgr_realloc, shrink_a_bit);
 	RUN_TEST_CASE(memmgr_realloc, shrink_a_lot);
+	RUN_TEST_CASE(memmgr_realloc, shrink_a_lot_but_cant_merge);
 	RUN_TEST_CASE(memmgr_realloc, grow_a_bit);
 	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_eat_next);
 	RUN_TEST_CASE(memmgr_realloc, grow_a_lot_eat_prev);
@@ -185,6 +186,20 @@ TEST(memmgr_realloc, shrink_a_lot)
 	mm_chunk_t *new = mm_compute_next(chnk, csize);
 	mock_mm_chunk_split_ExpectAndReturn(chnk, csize, false);
 	mock_mm_chunk_merge_Expect(new);
+	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
+
+	uint8_t *ptr = mm_realloc(gs_ptr, new_payload);
+	TEST_ASSERT_EQUAL_PTR(gs_ptr, ptr);
+	gs_size = new_payload;
+}
+
+TEST(memmgr_realloc, shrink_a_lot_but_cant_merge)
+{
+	uint32_t csize = 14;
+	mm_chunk_t *chnk = mm_tochunk(gs_ptr);
+	mm_chunk_t *next = mm_chunk_next_get(chnk);
+	chunk_test_allocated_set(next, true);
+	mock_mm_chunk_split_ExpectAndReturn(chnk, csize, false);
 	uint32_t new_payload = (csize - (mm_header_csize() + MM_CFG_GUARD_SIZE)) * MM_CFG_ALIGNMENT;
 
 	uint8_t *ptr = mm_realloc(gs_ptr, new_payload);
