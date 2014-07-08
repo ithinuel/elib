@@ -191,7 +191,10 @@ static void *mm_realloc_impl(void *old_ptr, uint32_t size)
 	} else {
 		mm_chunk_t *new = mm_chunk_split(this, wanted_csize);
 		if (new != NULL) {
-			mm_chunk_merge(new);
+			mm_chunk_t *next = mm_chunk_next_get(new);
+			if (mm_chunk_is_available(next)) {
+				mm_chunk_merge(new);
+			}
 		}
 		new_ptr = old_ptr;
 	}
