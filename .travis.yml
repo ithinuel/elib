@@ -8,4 +8,4 @@ before_install:
 script: make tests
 
 after_success:
-    - coveralls -E '.*test.*' -e third_party --gcov-options=--preserve-paths -b .
+    - coveralls -E '.*\.h' -E '.*test.*' -e third_party --gcov-options=--preserve-paths -b .
