@@ -20,6 +20,7 @@ CORE_SRCS = \
 	$(CORE_DIR)/common/object_test.c \
 	$(CORE_DIR)/memmgr/memmgr.c \
 	$(CORE_DIR)/memmgr/memmgr_mock.c \
+	$(CORE_DIR)/memmgr/memmgr_mock_test.c \
 	$(CORE_DIR)/memmgr/memmgr_unity.c \
 	$(CORE_DIR)/memmgr/memmgr_test.c \
 	$(CORE_DIR)/memmgr/memmgr_test_alloc.c \
