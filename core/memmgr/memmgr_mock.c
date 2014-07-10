@@ -153,8 +153,6 @@ static void mock_clean(void)
 /* Functions definitions -----------------------------------------------------*/
 void mock_memmgr_setup(void)
 {
-	mock_clean();
-
 	gs_mm_alloc = mm_alloc;
 	gs_mm_free = mm_free;
 	UT_PTR_SET(mm_alloc, mock_mm_alloc);
@@ -186,6 +184,7 @@ void mock_mm_free_Expect(void *ptr)
 
 void mock_memmgr_verify(void)
 {
+	mock_clean();
 	TEST_ASSERT_NULL_MESSAGE(gs_mock_expect,
 				  "Calls were still expected");
 }
