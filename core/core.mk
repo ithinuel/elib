@@ -28,6 +28,7 @@ CORE_SRCS = \
 	$(CORE_DIR)/memmgr/memmgr_test_realloc.c \
 	$(CORE_DIR)/memmgr/chunk.c \
 	$(CORE_DIR)/memmgr/chunk_mock.c \
+	$(CORE_DIR)/memmgr/chunk_mock_test.c \
 	$(CORE_DIR)/memmgr/chunk_test.c \
 	$(CORE_DIR)/memmgr/chunk_test_tools.c \
 	$(CORE_DIR)/memmgr/chunk_test_validate.c \

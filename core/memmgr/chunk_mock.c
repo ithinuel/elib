@@ -174,8 +174,6 @@ static void mock_clean(void)
 /* Definitions ---------------------------------------------------------------*/
 void mock_chunk_setup(void)
 {
-	mock_clean();
-
 	gs_chunk_split = mm_chunk_split;
 	gs_chunk_merge = mm_chunk_merge;
 	UT_PTR_SET(mm_find_first_free, mock_mm_find_first_free);
@@ -186,8 +184,9 @@ void mock_chunk_setup(void)
 
 void mock_chunk_verify(void)
 {
-	TEST_ASSERT_NULL_MESSAGE(gs_mock_expect,
-				  "Calls were still expected");
+	bool success = gs_mock_expect == NULL;
+	mock_clean();
+	TEST_ASSERT_MESSAGE(success, "Calls were still expected");
 }
 
 void mock_mm_find_first_free_ExpectAndReturn(uint16_t wanted_csize, mm_chunk_t *ret)

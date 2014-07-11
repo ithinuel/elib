@@ -25,13 +25,14 @@ static char *gs_expected_cause = NULL;
 
 static void runAllTests()
 {
+	RUN_TEST_GROUP(chunk_mock);
+	RUN_TEST_GROUP(memmgr_mock);
 	RUN_TEST_GROUP(mm_chunk);
 	RUN_TEST_GROUP(memmgr);
 	RUN_TEST_GROUP(cexcept);
 	RUN_TEST_GROUP(object);
 	RUN_TEST_GROUP(mutex);
 	RUN_TEST_GROUP(spinlock);
-	RUN_TEST_GROUP(memmgr_mock);
 }
 
 void die(const char *reason)
