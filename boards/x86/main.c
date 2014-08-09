@@ -31,6 +31,7 @@ static void runAllTests()
 	RUN_TEST_GROUP(object);
 	RUN_TEST_GROUP(mutex);
 	RUN_TEST_GROUP(spinlock);
+	RUN_TEST_GROUP(stream);
 }
 
 void die(const char *reason)
