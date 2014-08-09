@@ -18,6 +18,8 @@ CORE_SRCS = \
 	$(CORE_DIR)/common/common.c \
 	$(CORE_DIR)/common/object.c \
 	$(CORE_DIR)/common/object_test.c \
+	$(CORE_DIR)/common/stream.c \
+	$(CORE_DIR)/common/stream_test.c \
 	$(CORE_DIR)/memmgr/memmgr.c \
 	$(CORE_DIR)/memmgr/memmgr_mock.c \
 	$(CORE_DIR)/memmgr/memmgr_unity.c \

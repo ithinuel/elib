@@ -24,3 +24,13 @@ Development rules
 =================
 Apply Test Driven Development.
 
+
+Plans
+=====
+
+Short term: 
+ - MQTT client support.
+ - MQTT-SN client support.
+
+Long term:
+ - Lua engine. 
