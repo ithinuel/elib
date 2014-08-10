@@ -21,7 +21,7 @@ OS_SRCS = \
 	$(OS_DIR)/system.c
 	
 OS_CFLAGS +=
-LDFLAGS += -lpthread
+LDFLAGS += -pthread
 
 DEPS += $(call src_to_dep,$(OS_SRCS))
 OBJS += $(call src_to_obj,$(OS_SRCS))

@@ -15,6 +15,7 @@
 */
 
 /* Includes ------------------------------------------------------------------*/
+#include <unistd.h>
 #include <pthread.h>
 #include "os/system.h"
 #include "os/task.h"
