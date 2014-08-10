@@ -17,9 +17,11 @@ OS_DIR = os/Unix
 OS_SRCS = \
 	$(OS_DIR)/task.c \
 	$(OS_DIR)/mutex.c \
-	$(OS_DIR)/test_mutex.c
+	$(OS_DIR)/test_mutex.c \
+	$(OS_DIR)/system.c
 	
-OS_CFLAGS +=  
+OS_CFLAGS +=
+LDFLAGS += -lpthread
 
 DEPS += $(call src_to_dep,$(OS_SRCS))
 OBJS += $(call src_to_obj,$(OS_SRCS))

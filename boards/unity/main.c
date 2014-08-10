@@ -17,22 +17,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "unity_fixture.h"
-
-#include "tests/common_mock.h"
+#include "os/memmgr.h"
+#include "os/system.h"
+#include "mcp/mcp.h"
 
 jmp_buf g_on_die;
 static char *gs_expected_cause = NULL;
-
-static void runAllTests()
-{
-	RUN_TEST_GROUP(mm_chunk);
-	RUN_TEST_GROUP(memmgr);
-	RUN_TEST_GROUP(cexcept);
-	RUN_TEST_GROUP(object);
-	RUN_TEST_GROUP(mutex);
-	RUN_TEST_GROUP(spinlock);
-	RUN_TEST_GROUP(stream);
-}
 
 void die(const char *reason)
 {
@@ -61,5 +51,6 @@ void die_Verify(void)
 
 int main(int argc, char **argv, char **arge)
 {
-	return UnityMain(argc, argv, runAllTests);
+	system_boot(&g_mcp_entry);
+	return 0;
 }

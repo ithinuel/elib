@@ -21,9 +21,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "common/cexcept.h"
 #include "common/mockable.h"
+#include "common/object.h"
 
 /* Public types --------------------------------------------------------------*/
 typedef void		(*task_delay_ms_f)		(int32_t ms);
+typedef void		(*task_start_f)			(void *arg);
+typedef struct
+{
+	object_t	base;
+}	task_t;
 
 /* Public macros -------------------------------------------------------------*/
 /* Public variables ----------------------------------------------------------*/
@@ -37,5 +43,20 @@ MOCKABLE task_delay_ms_f		task_delay_ms;
 
 cexcept_ctx_t *		task_cexcept_get_ctx		(void);
 void			task_cexcept_set_ctx		(cexcept_ctx_t *);
+
+/**
+ * Create a task.
+ * @param	routine		Start routine.
+ * @param	stack_size	Stack size in byte.
+ * @param	priority	Task priority.
+ * @return Create task or NULL.
+ */
+task_t *		task_create			(task_start_f routine,
+							 void *arg,
+							 uint32_t stack_size,
+							 uint32_t priority,
+							 char *name);
+bool			task_start			(task_t *this);
+uint32_t		task_running_count		(void);
 
 #endif
