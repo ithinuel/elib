@@ -18,10 +18,16 @@
 #include <stdbool.h>
 #include "unity_fixture.h"
 
-#include "tests/common_mock.h"
+#include "mcp/mcp.h"
 
-jmp_buf g_on_die;
-static char *gs_expected_cause = NULL;
+static void mcp_entry(void);
+
+system_entry_t g_mcp_entry  =
+{
+	.entry = mcp_entry,
+	.stack_size = 512,
+	.priority = 1
+};
 
 static void runAllTests()
 {
@@ -33,34 +39,12 @@ static void runAllTests()
 	RUN_TEST_GROUP(object);
 	RUN_TEST_GROUP(mutex);
 	RUN_TEST_GROUP(spinlock);
+	RUN_TEST_GROUP(stream);
+	RUN_TEST_GROUP(task);
+	RUN_TEST_GROUP(task_mock);
 }
 
-void die(const char *reason)
+static void mcp_entry(void)
 {
-	if (gs_expected_cause != NULL) {
-		TEST_ASSERT_EQUAL_STRING(gs_expected_cause, reason);
-		gs_expected_cause= NULL;
-		longjmp(g_on_die, 1);
-	} else {
-		TEST_FAIL_MESSAGE(reason);
-		/* test fail may return on  teardown */
-		exit(1);
-	}
-}
-
-void die_Expect(char *expected_cause)
-{
-	gs_expected_cause = expected_cause;
-}
-
-void die_Verify(void)
-{
-	if (gs_expected_cause != NULL) {
-		TEST_FAIL_MESSAGE("This test should have died");
-	}
-}
-
-int main(int argc, char **argv, char **arge)
-{
-	return UnityMain(argc, argv, runAllTests);
+	UnityMain(0, NULL, runAllTests);
 }

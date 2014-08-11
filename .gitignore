@@ -27,3 +27,6 @@
 /third_party/*
 !/third_party/*.mk
 /build_*
+.project
+.cproject
+.settings

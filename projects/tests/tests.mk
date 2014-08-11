@@ -18,6 +18,14 @@ OUT_DIR	= build_tests
 
 MSG_BEGIN	= "-------- tests --------"
 
-BOARD	= x86
+BOARD	= unity
 OS	= Unix
 
+PRJ_SRCS = projects/tests/mcp/mcp.c
+
+CFLAGS += -I projects/tests/
+
+DEPS += $(call src_to_dep,$(PRJ_SRCS))
+OBJS += $(call src_to_obj,$(PRJ_SRCS))
+
+$(call build, $(PRJ_SRCS), $(PRJ_CFLAGS))

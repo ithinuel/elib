@@ -14,20 +14,19 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_TASK_MOCK_H__
-#define __TESTS_TASK_MOCK_H__
+#ifndef __OS_SYSTEM_H__
+#define __OS_SYSTEM_H__
 
-/* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 
-/* Types ---------------------------------------------------------------------*/
-typedef void (*task_delay_ms_delegate_f)(void);
+typedef void	(*system_entry_f)	(void);
+typedef struct
+{
+	system_entry_f		entry;
+	uint32_t		stack_size;
+	uint32_t		priority;
+}	system_entry_t;
 
-/* Prototypes ----------------------------------------------------------------*/
-void			task_mock_delay_ms_setup	(void);
-void			task_mock_delay_ms_verify	(void);
-void			task_delay_ms_ExpectNthenCbk	(uint32_t ms,
-							 uint32_t times,
-							 task_delay_ms_delegate_f cbk);
+void		system_boot		(system_entry_t *entry);
 
 #endif
