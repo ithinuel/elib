@@ -54,7 +54,7 @@ TEST(spinlock, unlock)
 
 TEST(spinlock, lock)
 {
-	task_delay_ms_setup();
+	task_mock_delay_ms_setup();
 
 	TEST_ASSERT_FALSE(spinlock_lock(&lock, 0, 1));
 
@@ -64,5 +64,5 @@ TEST(spinlock, lock)
 	task_delay_ms_ExpectNthenCbk(10, 5, NULL);
 	TEST_ASSERT_FALSE(spinlock_lock(&lock, 50, 10));
 
-	task_delay_ms_verify();
+	task_mock_delay_ms_verify();
 }

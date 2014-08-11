@@ -24,7 +24,7 @@ typedef struct _task_delay_call_t task_delay_call_t;
 struct _task_delay_call_t
 {
 	int32_t			expect_ms;
-	delegate_f		then_cbk;
+	task_delay_ms_delegate_f		then_cbk;
 	task_delay_call_t	*next;
 };
 
@@ -52,7 +52,7 @@ static void mock_task_delay_ms(int32_t ms)
 	}
 }
 
-static void task_delay_ms_ExpectthenCbk(uint32_t ms, delegate_f cbk)
+static void task_delay_ms_ExpectthenCbk(uint32_t ms, task_delay_ms_delegate_f cbk)
 {
 	task_delay_call_t *new = unity_malloc(sizeof(task_delay_call_t));
 	new->expect_ms = ms;
@@ -68,12 +68,12 @@ static void task_delay_ms_ExpectthenCbk(uint32_t ms, delegate_f cbk)
 	gs_last = new;
 }
 
-void task_delay_ms_setup(void)
+void task_mock_delay_ms_setup(void)
 {
 	UT_PTR_SET(task_delay_ms, mock_task_delay_ms);
 }
 
-void task_delay_ms_ExpectNthenCbk(uint32_t ms, uint32_t times, delegate_f cbk)
+void task_delay_ms_ExpectNthenCbk(uint32_t ms, uint32_t times, task_delay_ms_delegate_f cbk)
 {
 	if (times == 0) {
 		return;
@@ -85,7 +85,13 @@ void task_delay_ms_ExpectNthenCbk(uint32_t ms, uint32_t times, delegate_f cbk)
 	task_delay_ms_ExpectthenCbk(ms, cbk);
 }
 
-void task_delay_ms_verify(void)
+void task_mock_delay_ms_verify(void)
 {
-	TEST_ASSERT_NULL_MESSAGE(gs_last, "missing call to task_delay_ms");
+	bool success = (gs_last == NULL);
+	while (gs_last != NULL) {
+		task_delay_call_t *c = gs_last->next;
+		unity_free(gs_last);
+		gs_last = c;
+	}
+	TEST_ASSERT_MESSAGE(success, "missing call to task_delay_ms");
 }

@@ -16,10 +16,13 @@ OS_DIR = os/Unix
 
 OS_SRCS = \
 	$(OS_DIR)/task.c \
+	$(OS_DIR)/task_test.c \
 	$(OS_DIR)/mutex.c \
-	$(OS_DIR)/test_mutex.c
+	$(OS_DIR)/test_mutex.c \
+	$(OS_DIR)/system.c
 	
-OS_CFLAGS +=  
+OS_CFLAGS += -include "unity_fixture.h"
+LDFLAGS += -pthread
 
 DEPS += $(call src_to_dep,$(OS_SRCS))
 OBJS += $(call src_to_obj,$(OS_SRCS))

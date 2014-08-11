@@ -12,7 +12,7 @@
 #	See the License for the specific language governing permissions and
 #	limitations under the License.
 
-BOARD_DIR = boards/x86
+BOARD_DIR = boards/unity
 
 BOARD_SRCS = \
 	$(BOARD_DIR)/cexcept.c \
