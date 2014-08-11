@@ -23,6 +23,7 @@ static void runAllTests()
 	RUN_TEST_GROUP(mutex);
 	RUN_TEST_GROUP(spinlock);
 	RUN_TEST_GROUP(stream);
+	RUN_TEST_GROUP(task);
 }
 
 static void mcp_entry(void)

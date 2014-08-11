@@ -60,19 +60,20 @@ static void task_delete(object_t *base)
 {
 	task_t *this = base_of(base, task_t);
 	task_internal_t *self = base_of(this, task_internal_t);
-	pthread_cancel(self->thread);
+	task_stop(this);
 	free(self);
 }
 
 static char *task_to_string(object_t *base)
 {
+	const char *prefix = "task: ";
 	task_t *this = base_of(base, task_t);
 	task_internal_t *self = base_of(this, task_internal_t);
-	char * string = malloc(7 + strlen(self->name) + 1);
+	char * string = malloc(strlen(prefix) + strlen(self->name) + 1);
 	if (string != NULL) {
-		strcpy(string, "task : ");
-		strcpy(string, self->name);
-		string[7 + strlen(self->name)] = '\0';
+		strcpy(string, prefix);
+		strcpy(string + strlen(prefix), self->name);
+		string[strlen(prefix) + strlen(self->name)] = '\0';
 	}
 	return string;
 }
@@ -99,6 +100,7 @@ task_t *task_create(task_start_f routine, void *arg, uint32_t stack_size,
 	}
 
 	self->base.base.ops = &gs_obj_ops;
+	self->thread = 0;
 	self->routine = routine;
 	self->arg = arg;
 	self->stack_size = stack_size;
@@ -116,6 +118,16 @@ bool task_start(task_t *this)
 		gs_task_running_count++;
 	}
 	return running;
+}
+
+void task_stop(task_t *this)
+{
+	task_internal_t *self = base_of(this, task_internal_t);
+	if (self->thread != 0) {
+		pthread_cancel(self->thread);
+		self->thread = 0;
+		gs_task_running_count--;
+	}
 }
 
 uint32_t task_running_count(void)

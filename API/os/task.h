@@ -57,6 +57,7 @@ task_t *		task_create			(task_start_f routine,
 							 uint32_t priority,
 							 char *name);
 bool			task_start			(task_t *this);
+void			task_stop			(task_t *this);
 uint32_t		task_running_count		(void);
 
 #endif
