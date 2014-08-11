@@ -21,13 +21,13 @@
 #include <stdint.h>
 
 /* Types ---------------------------------------------------------------------*/
-typedef void (*delegate_f)(void);
+typedef void (*task_delay_ms_delegate_f)(void);
 
 /* Prototypes ----------------------------------------------------------------*/
-void			task_delay_ms_setup		(void);
+void			task_mock_delay_ms_setup	(void);
+void			task_mock_delay_ms_verify	(void);
 void			task_delay_ms_ExpectNthenCbk	(uint32_t ms,
 							 uint32_t times,
-							 delegate_f cbk);
-void			task_delay_ms_verify		(void);
+							 task_delay_ms_delegate_f cbk);
 
 #endif

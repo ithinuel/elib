@@ -36,7 +36,8 @@ CORE_SRCS = \
 	$(CORE_DIR)/common/cexcept_test.c \
 	$(CORE_DIR)/os/spinlock.c \
 	$(CORE_DIR)/os/spinlock_test.c \
-	$(CORE_DIR)/os/task_mock.c
+	$(CORE_DIR)/os/task_mock.c \
+	$(CORE_DIR)/os/task_mock_test.c
 	
 CORE_CFLAGS +=
 
