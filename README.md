@@ -11,11 +11,11 @@ some flags :
 Folder hierarchy
 ================
 - API : all public .h
-- boards/&lt;board_name> : boards specific code, configuration file, linkerscript
+- boards/&lt;board_name&gt; : boards specific code, configuration file, linkerscript
 - core : Core library implementation
   This code must be platform independant, and therefore care must be taken to endianness
-- os/&lt;os_name> : Operating system binding code to the API.
-- parts/&lt;part_name> : Part or part family specific core.
+- os/&lt;os_name&gt; : Operating system binding code to the API.
+- parts/&lt;part_name&gt; : Part or part family specific core.
   Here go device drivers etc.
 - third_party : Third party code.
   You can install here every third party library you want.
@@ -31,6 +31,9 @@ Plans
 Short term: 
  - MQTT client support.
  - MQTT-SN client support.
+ 
+Mid term:
+ - Implements some crypto ("pour le plaisir").
 
 Long term:
  - Lua engine. 
