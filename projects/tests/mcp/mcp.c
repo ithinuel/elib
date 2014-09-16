@@ -43,6 +43,7 @@ static void runAllTests()
 	RUN_TEST_GROUP(spinlock);
 	RUN_TEST_GROUP(stream);
 	RUN_TEST_GROUP(task);
+	RUN_TEST_GROUP(list);
 }
 
 static void mcp_entry(void)

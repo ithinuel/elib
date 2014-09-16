@@ -15,6 +15,8 @@
 CORE_DIR = core
 
 CORE_SRCS = \
+	$(CORE_DIR)/collections/list_test.c \
+	$(CORE_DIR)/collections/list.c \
 	$(CORE_DIR)/common/common.c \
 	$(CORE_DIR)/common/object.c \
 	$(CORE_DIR)/common/object_test.c \
