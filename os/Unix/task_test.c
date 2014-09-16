@@ -16,7 +16,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdlib.h>
-#include <unistd.h>
 #include "unity_fixture.h"
 #include "os/task.h"
 
@@ -28,7 +27,7 @@ static void task_test_routine(void *arg)
 	while(true)
 	{
 		gs_counter++;
-		usleep(1000);
+		task_delay_ms(1);
 	}
 }
 
@@ -69,13 +68,13 @@ TEST(task, delete_cancel_thread)
 {
 	task_start(gs_tsk);
 	uint32_t val1 = gs_counter;
-	usleep(10000);
+	task_delay_ms(10);
 	uint32_t val2 = gs_counter;
 	TEST_ASSERT_MESSAGE((val1 != val2), "Task is not running");
 
 	task_stop(gs_tsk);
 	val1 = gs_counter;
-	usleep(10000);
+	task_delay_ms(10);
 	val2 = gs_counter;
 	TEST_ASSERT_MESSAGE((val1 == val2), "Task is still running");
 

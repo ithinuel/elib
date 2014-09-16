@@ -21,16 +21,8 @@
 #include "tests/chunk_mock.h"
 #include "unity_fixture.h"
 
-static bool gs_this_test_should_fail = false;
 static uint32_t gs_mm_alloc_expect_size = 0;
 static bool gs_mm_alloc_called = false;
-
-static void expected_failure(void)
-{
-	UnityPrint("[[This message was expected]]");
-	Unity.CurrentTestFailed = 0;
-	gs_this_test_should_fail = false;
-}
 
 TEST_GROUP(chunk_mock);
 
@@ -51,7 +43,6 @@ TEST_SETUP(chunk_mock)
 {
 	gs_mm_alloc_expect_size = 0;
 	gs_mm_alloc_called = false;
-	gs_this_test_should_fail = false;
 	mock_chunk_setup();
 }
 
@@ -63,97 +54,69 @@ TEST_TEAR_DOWN(chunk_mock)
 TEST(chunk_mock, alloc_failure_on_expect_find_first_free)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_find_first_free_ExpectAndReturn(0, NULL);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(chunk_mock, alloc_failure_on_expect_validate_csize)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
-
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_validate_csize_ExpectAndReturn(0, 0, false);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(chunk_mock, alloc_failure_on_expect_split)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
 
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_chunk_split_ExpectAndReturn(NULL, 0, true);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(chunk_mock, alloc_failure_on_expect_merge)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
 
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_chunk_merge_Expect(NULL);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(chunk_mock, verify_clean_remaining_expectations)
 {
-	gs_this_test_should_fail = true;
 	mock_mm_chunk_merge_Expect(NULL);
-	if (TEST_PROTECT()) {
-		mock_chunk_verify();
-	} else {
-		expected_failure();
-	}
+	EXPECT_ABORT_BEGIN
+	mock_chunk_verify();
+	VERIFY_FAILS_END("Calls were still expected");
 }
 
 TEST(chunk_mock, fail_on_unexpected_call_to_split)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_chunk_split(NULL, 0);
-	} else {
-		expected_failure();
-	}
+	EXPECT_ABORT_BEGIN
+	mm_chunk_split(NULL, 0);
+	VERIFY_FAILS_END("Unexpected call to mm_chunk_split.");
 }
 
 TEST(chunk_mock, fail_on_unexpected_call_to_merge)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_chunk_merge(NULL);
-	} else {
-		expected_failure();
-	}
+	EXPECT_ABORT_BEGIN
+	mm_chunk_merge(NULL);
+	VERIFY_FAILS_END("Unexpected call to mm_chunk_merge.");
 }
 
 TEST(chunk_mock, fail_on_unexpected_call_to_validate_csize)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_validate_csize(0, 0);
-	} else {
-		expected_failure();
-	}
+	EXPECT_ABORT_BEGIN
+	mm_validate_csize(0, 0);
+	VERIFY_FAILS_END("Unexpected call to mm_validate_csize.");
 }
 
 TEST(chunk_mock, fail_on_unexpected_call_to_find_first_free)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_find_first_free(0);
-	} else {
-		expected_failure();
-	}
+	EXPECT_ABORT_BEGIN
+	mm_find_first_free(0);
+	VERIFY_FAILS_END("Unexpected call to mm_find_first_free.");
 }

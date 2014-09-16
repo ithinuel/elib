@@ -88,22 +88,45 @@ TEST_TEAR_DOWN(cexcept) {
 /* Tests ---------------------------------------------------------------------*/
 TEST(cexcept, Throw_alone)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	do_something(true);
-	VERIFY_DIE_END
-
-	die_Verify();
+	VERIFY_FAILS_END("Throw without context");
 }
 TEST(cexcept, Try_Fail_to_alloc)
 {
-//	mm_Expect(false);
+	bool first_try = false;
+	bool first_catch = false;
+	UnityMalloc_MakeMallocFailAfterCount(0);
+	EXPECT_ABORT_BEGIN
+	Try {
+		TEST_FAIL_MESSAGE("Should not be reached.");
+	} while(0);
+	break;
+	}/* close case */
+	}/* close switch */
+	}/* close block */
+
+	VERIFY_FAILS_END("Throw without context");
+
+	UnityMalloc_MakeMallocFailAfterCount(1);
+	Try {
+		first_try = true;
+		Try {
+			TEST_FAIL_MESSAGE("Should not be reached.");
+		} Catch {
+
+		}
+		EndTry
+	} Catch {
+		first_catch = true;
+	}
+	EndTry
+	TEST_ASSERT_TRUE_MESSAGE(first_try && first_catch, "First try should have passed");
 }
+
 TEST(cexcept, Catch_without_ctx)
 {
-	die_Expect("Catch without context");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	switch(1)
 	{
 	case 0:
@@ -116,16 +139,13 @@ TEST(cexcept, Catch_without_ctx)
 		break;
 	}
 	}
-	VERIFY_DIE_END
-
-	die_Verify();
+	VERIFY_FAILS_END("Catch without context");
 }
 TEST(cexcept, Finally_without_ctx)
 {
 	jmp_buf __buf;
 
-	die_Expect("Finally without context");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	switch(1)
 	{
 	case 0:
@@ -138,14 +158,12 @@ TEST(cexcept, Finally_without_ctx)
 		break;
 	}
 	}
-	VERIFY_DIE_END
-
-	die_Verify();
+	VERIFY_FAILS_END("Finally without context");
 }
+
 TEST(cexcept, EndTry_without_ctx)
 {
-	die_Expect("Exit without context");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	{
 	switch(1)
 	{
@@ -153,9 +171,7 @@ TEST(cexcept, EndTry_without_ctx)
 	{
 		do {}
 	EndTry
-	VERIFY_DIE_END
-
-	die_Verify();
+	VERIFY_FAILS_END("Exit without context");
 }
 
 TEST(cexcept, Try_EndTry)
@@ -171,20 +187,17 @@ TEST(cexcept, Try_EndTry)
 }
 TEST(cexcept, Try_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
 		did_try_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
-	die_Verify();
 }
 
 TEST(cexcept, Try_Catch_EndTry)
@@ -249,9 +262,7 @@ TEST(cexcept, Try_Catch_Throw_EndTry)
 }
 TEST(cexcept, Try_Throw_Catch_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -265,13 +276,12 @@ TEST(cexcept, Try_Throw_Catch_Throw_EndTry)
 		did_catch_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
 	TEST_ASSERT_TRUE(did_catch_start);
 	TEST_ASSERT_FALSE(did_catch_end);
-	die_Verify();
 }
 
 TEST(cexcept, Try_Catch_Finally_EndTry)
@@ -359,9 +369,7 @@ TEST(cexcept, Try_Catch_Throw_Finally_EndTry)
 }
 TEST(cexcept, Try_Catch_Finally_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(false);
@@ -378,7 +386,7 @@ TEST(cexcept, Try_Catch_Finally_Throw_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_TRUE(did_try_end);
@@ -386,13 +394,10 @@ TEST(cexcept, Try_Catch_Finally_Throw_EndTry)
 	TEST_ASSERT_FALSE(did_catch_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Throw_Catch_Throw_Finally_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -410,7 +415,7 @@ TEST(cexcept, Try_Throw_Catch_Throw_Finally_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
@@ -418,13 +423,10 @@ TEST(cexcept, Try_Throw_Catch_Throw_Finally_EndTry)
 	TEST_ASSERT_FALSE(did_catch_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_TRUE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Throw_Catch_Finally_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -442,7 +444,7 @@ TEST(cexcept, Try_Throw_Catch_Finally_Throw_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
@@ -450,13 +452,10 @@ TEST(cexcept, Try_Throw_Catch_Finally_Throw_EndTry)
 	TEST_ASSERT_TRUE(did_catch_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Catch_Throw_Finally_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(false);
@@ -475,7 +474,7 @@ TEST(cexcept, Try_Catch_Throw_Finally_Throw_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_TRUE(did_try_end);
@@ -483,13 +482,10 @@ TEST(cexcept, Try_Catch_Throw_Finally_Throw_EndTry)
 	TEST_ASSERT_FALSE(did_catch_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Throw_Catch_Throw_Finally_Throw_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -508,7 +504,7 @@ TEST(cexcept, Try_Throw_Catch_Throw_Finally_Throw_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
@@ -516,7 +512,6 @@ TEST(cexcept, Try_Throw_Catch_Throw_Finally_Throw_EndTry)
 	TEST_ASSERT_FALSE(did_catch_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 
 TEST(cexcept, Try_Finally_EndTry)
@@ -540,9 +535,7 @@ TEST(cexcept, Try_Finally_EndTry)
 }
 TEST(cexcept, Try_Throw_Finally_EndTry)
 {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -554,18 +547,15 @@ TEST(cexcept, Try_Throw_Finally_EndTry)
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_TRUE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Finally_Throw_EndTry) {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(false);
@@ -577,18 +567,15 @@ TEST(cexcept, Try_Finally_Throw_EndTry) {
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_TRUE(did_try_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 TEST(cexcept, Try_Throw_Finally_Throw_EndTry) {
-	die_Expect("Throw without context");
-
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	Try {
 		did_try_start = true;
 		do_something(true);
@@ -600,13 +587,12 @@ TEST(cexcept, Try_Throw_Finally_Throw_EndTry) {
 		did_finally_end = true;
 	}
 	EndTry
-	VERIFY_DIE_END
+	VERIFY_FAILS_END("Throw without context");
 
 	TEST_ASSERT_TRUE(did_try_start);
 	TEST_ASSERT_FALSE(did_try_end);
 	TEST_ASSERT_TRUE(did_finally_start);
 	TEST_ASSERT_FALSE(did_finally_end);
-	die_Verify();
 }
 
 

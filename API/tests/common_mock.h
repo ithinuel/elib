@@ -21,10 +21,6 @@
 #include <setjmp.h>
 #include <stdint.h>
 
-#define VERIFY_DIE_START \
-	if (setjmp(g_on_die)==0) {
-#define VERIFY_DIE_END \
-	}
 
 /* Public functions ----------------------------------------------------------*/
 void				die_Expect			(char *expected_cause);

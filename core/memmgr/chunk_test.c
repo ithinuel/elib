@@ -159,11 +159,9 @@ TEST(mm_chunk, merge_alloc_alloc)
 	mm_chunk_t *second = mm_chunk_next_get(g_first);
 	uint32_t payload_b = chunk_test_fill_with_prepare(second, 'B');
 	
-	die_Expect("MM: cant merge");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mm_chunk_merge(g_first);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: cant merge");
 	
 	chunk_test_verify(a_state, 3);
 	chunk_test_fill_with_verify(mm_toptr(g_first), 'A', payload_a);

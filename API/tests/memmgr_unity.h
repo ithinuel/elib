@@ -14,8 +14,8 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_MEMMGR_MOCK_H__
-#define __TESTS_MEMMGR_MOCK_H__
+#ifndef __TESTS_MEMMGR_UNITY_H__
+#define __TESTS_MEMMGR_UNITY_H__
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>

@@ -126,7 +126,7 @@ static void mock_mm_chunk_merge(mm_chunk_t *this)
 static bool mock_mm_validate_csize(uint16_t min_csize, uint32_t csize)
 {
 	TEST_ASSERT_MESSAGE(mock_expect() == mock_call_type_validate_csize,
-			    "Unexpected call to mm_validate_csize");
+			    "Unexpected call to mm_validate_csize.");
 	TEST_ASSERT_EQUAL_UINT16(gs_mock_expect->call.validate_csize.expect_min_csize, min_csize);
 	TEST_ASSERT_EQUAL_UINT32(gs_mock_expect->call.validate_csize.expect_csize, csize);
 	bool ret = gs_mock_expect->call.validate_csize.then_return;

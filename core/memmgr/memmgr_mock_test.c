@@ -21,7 +21,6 @@
 #include "tests/memmgr_mock.h"
 #include "unity_fixture.h"
 
-static bool gs_this_test_should_fail = false;
 static uint32_t gs_mm_alloc_expect_size = 0;
 static bool gs_mm_alloc_called = false;
 
@@ -44,83 +43,69 @@ TEST_GROUP_RUNNER(memmgr_mock)
 	RUN_TEST_CASE(memmgr_mock, fail_on_unexpected_call_to_free);
 
 	RUN_TEST_CASE(memmgr_mock, mock_mm_alloc_should_call_saved_cbk_if_return_not_set);
+	RUN_TEST_CASE(memmgr_mock, dont_fail_when_ignore_size_and_return);
 }
 
 TEST_SETUP(memmgr_mock)
 {
 	gs_mm_alloc_expect_size = 0;
 	gs_mm_alloc_called = false;
-	gs_this_test_should_fail = false;
 	mock_memmgr_setup();
 }
 
 TEST_TEAR_DOWN(memmgr_mock)
 {
 	mock_memmgr_verify();
-
-	if (gs_this_test_should_fail) {
-		TEST_ASSERT_MESSAGE((Unity.CurrentTestFailed == 1),
-				"This test should have failed but did not.");
-		Unity.CurrentTestFailed = 0;
-	}
 }
 
 TEST(memmgr_mock, free_expect_alloc_failure)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
-
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_free_Expect(NULL);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(memmgr_mock, alloc_expect_alloc_failure)
 {
 	UnityMalloc_MakeMallocFailAfterCount(0);
 
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_alloc_Expect(0);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 
-	die_Expect("expect init failure");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mock_mm_alloc_ExpectAndReturn(0, NULL);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("expect init failure");
 }
 
 TEST(memmgr_mock, verify_clean_remaining_expectations)
 {
 	mock_mm_alloc_Expect(0);
-	if (TEST_PROTECT()) {
-		mock_memmgr_verify();
-	}
+	EXPECT_ABORT_BEGIN
+	mock_memmgr_verify();
+	VERIFY_FAILS_END("Calls were still expected.");
+	mock_memmgr_setup(); /* re-open mock_memmgr session. */
 }
 
 TEST(memmgr_mock, fail_on_unexpected_call_to_alloc)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_alloc(0);
-	}
+	EXPECT_ABORT_BEGIN
+	mm_alloc(0);
+	VERIFY_FAILS_END("Unexpected call to mm_alloc.");
 }
 
 TEST(memmgr_mock, fail_on_unexpected_call_to_free)
 {
-	gs_this_test_should_fail = true;
-	if (TEST_PROTECT())
-	{
-		mm_free(0);
-	}
+	EXPECT_ABORT_BEGIN
+	mm_free(0);
+	VERIFY_FAILS_END("Unexpected call to mm_free.");
 }
 
 TEST(memmgr_mock, mock_mm_alloc_should_call_saved_cbk_if_return_not_set)
 {
+	mock_memmgr_verify(); /* close pre-opened mock_memmgr session. */
+
 	UT_PTR_SET(mm_alloc, test_mock_mm_alloc);
 	mock_memmgr_setup();
 	gs_mm_alloc_expect_size = 32;
@@ -129,4 +114,21 @@ TEST(memmgr_mock, mock_mm_alloc_should_call_saved_cbk_if_return_not_set)
 	TEST_ASSERT_EQUAL_PTR(&gs_mm_alloc_expect_size, mm_alloc(32));
 
 	TEST_ASSERT_TRUE_MESSAGE(gs_mm_alloc_called, "saved cbk was not called");
+}
+
+TEST(memmgr_mock, dont_fail_when_ignore_size_and_return)
+{
+	uint32_t expect_s0 = 32;
+	uint32_t expect_s1 = 23;
+	void *expect_p0 = (void *)0x1234;
+	void *expect_p1 = (void *)0x5678;
+	void *expect_p2 = (void *)0x9012;
+
+	mock_mm_alloc_ExpectAndReturn(expect_s0, expect_p0);
+	mock_mm_alloc_IgnoreAndReturn(expect_p1);
+	mock_mm_alloc_ExpectAndReturn(expect_s1, expect_p2);
+
+	TEST_ASSERT_EQUAL_PTR(expect_p0, mm_alloc(expect_s0));
+	TEST_ASSERT_EQUAL_PTR(expect_p1, mm_alloc(234));
+	TEST_ASSERT_EQUAL_PTR(expect_p2, mm_alloc(expect_s1));
 }

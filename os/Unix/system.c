@@ -37,6 +37,6 @@ void system_boot(system_entry_t *entry)
 		task_start(t);
 	}
 	while (task_running_count()) {
-		sleep(1);
+		task_delay_ms(10);
 	}
 }
