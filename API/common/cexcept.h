@@ -91,7 +91,7 @@ typedef struct cexcept_ctx	cexcept_ctx_t;
  * @param	is_dynamic	true if message should be clean.
  */
 void			cexcept_throw			(const char *type,
-							 const char *message,
+							 char *message,
 							 bool is_dynamic);
 
 /**

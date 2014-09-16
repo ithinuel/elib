@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include "unity_fixture.h"
 #include "common/cexcept.h"
-
+#include "utils/cstring.h"
 #include "tests/common_mock.h"
 #include "tests/memmgr_unity.h"
 
@@ -68,6 +68,7 @@ TEST_GROUP_RUNNER(cexcept) {
 	RUN_TEST_CASE(cexcept, Try_Finally_Throw_EndTry);
 	RUN_TEST_CASE(cexcept, Try_Throw_Finally_Throw_EndTry);
 
+	RUN_TEST_CASE(cexcept, ReThrow_from_dynamicaly_allocated_Thrown_message_dont_leak);
 }
 
 TEST_SETUP(cexcept)
@@ -171,7 +172,7 @@ TEST(cexcept, EndTry_without_ctx)
 	{
 		do {}
 	EndTry
-	VERIFY_FAILS_END("Exit without context");
+	VERIFY_FAILS_END("EndTry without context");
 }
 
 TEST(cexcept, Try_EndTry)
@@ -595,4 +596,24 @@ TEST(cexcept, Try_Throw_Finally_Throw_EndTry) {
 	TEST_ASSERT_FALSE(did_finally_end);
 }
 
+TEST(cexcept, ReThrow_from_dynamicaly_allocated_Thrown_message_dont_leak)
+{
+	const char *hello = "Hello";
+	Try {
+		Try {
+			Try {
+				char *msg = cstring_dup(hello);
+				Throw("woops", msg, true);
+			}
+			EndTry
+		}
+		Catch {
+			Throw("arg", "real bad luck", false);
+		}
+		EndTry
+	}
+	Catch {
 
+	}
+	EndTry
+}

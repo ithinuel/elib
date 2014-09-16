@@ -33,11 +33,12 @@ struct cexcept_ctx
 	uint8_t		state;
 
 	cexcept_t	excpt;
-	bool		excpt_is_set;
+	bool		is_set;
+	bool		is_caught;
 };
 
 /* Public functions ----------------------------------------------------------*/
-void cexcept_throw(const char *type, const char *message, bool is_dynamic)
+void cexcept_throw(const char *type, char *message, bool is_dynamic)
 {
 	cexcept_ctx_t *cur = task_cexcept_get_ctx();
 
@@ -45,13 +46,15 @@ void cexcept_throw(const char *type, const char *message, bool is_dynamic)
 		die("Throw without context");
 	}
 
-	if (cur->excpt_is_set && cur->excpt.is_dynamic) {
-		mm_free((void *)cur->excpt.message);
+	if (cur->is_set && cur->excpt.is_dynamic) {
+		mm_free(cur->excpt.message);
 	}
+
 	cur->excpt.type = type;
 	cur->excpt.message = message;
-	cur->excpt.is_dynamic = false;
-	cur->excpt_is_set = true;
+	cur->excpt.is_dynamic = is_dynamic;
+	cur->is_set = true;
+	cur->is_caught = false;
 	longjmp(cur->jmpbuf, cur->state);
 }
 
@@ -62,7 +65,8 @@ void *cexcept_enter_ctx(void)
 		cexcept_throw("NOMEM", "no memory available to enter cexcept ctx.", false);
 	}
 	new->prev = task_cexcept_get_ctx();
-	new->excpt_is_set = false;
+	new->is_set = false;
+	new->is_caught = false;
 	new->state = 1;
 	task_cexcept_set_ctx(new);
 
@@ -76,7 +80,7 @@ cexcept_t *cexcept_catch(void)
 		die("Catch without context");
 	}
 	ctx->state = 2;
-	ctx->excpt_is_set = false;
+	ctx->is_caught = true;
 	return &ctx->excpt;
 }
 
@@ -91,21 +95,19 @@ void cexcept_finally(void)
 
 void cexcept_exit_ctx(void)
 {
-	bool		excpt_is_set = false;
-	cexcept_t	ex = {0};
-	cexcept_ctx_t	*cur = task_cexcept_get_ctx(),
-			*prev = NULL;
+	cexcept_ctx_t	ctx = {0};
+	cexcept_ctx_t	*cur = task_cexcept_get_ctx();
 	if (cur == NULL) {
-		die("Exit without context");
+		die("EndTry without context");
 	}
 
-	excpt_is_set = cur->excpt_is_set;
-	ex = cur->excpt;
-	prev = cur->prev;
-	task_cexcept_set_ctx(prev);
-
+	ctx = *cur;
 	mm_free(cur);
-	if (excpt_is_set) {
-		cexcept_throw(ex.type, ex.message, ex.is_dynamic);
+	task_cexcept_set_ctx(ctx.prev);
+
+	if (ctx.is_set && !ctx.is_caught) {
+		cexcept_throw(ctx.excpt.type, ctx.excpt.message, ctx.excpt.is_dynamic);
+	} else if (ctx.excpt.is_dynamic && (ctx.excpt.message != NULL)) {
+		mm_free(ctx.excpt.message);
 	}
 }
