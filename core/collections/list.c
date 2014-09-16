@@ -16,6 +16,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stddef.h>
+#include <stdio.h>
+
 #include "common/common.h"
 #include "collections/list.h"
 #include "os/memmgr.h"
@@ -26,6 +28,8 @@ typedef struct
 	list_t		base;
 	list_node_t	*first;
 	list_node_t	*last;
+
+	uint32_t	cnt;
 } list_internal_t;
 
 /* Prototypes ----------------------------------------------------------------*/
@@ -42,10 +46,24 @@ static const object_ops_t stack_obj_ops = {
 /* Functions definitions -----------------------------------------------------*/
 static char *list_to_string(object_t *this)
 {
-	return NULL;
+	list_t *self = base_of(this, list_t);
+	list_internal_t *self2 = base_of(self, list_internal_t);
+
+	char *string = mm_zalloc(11);
+	if (string != NULL) {
+		snprintf(string, 11, "list: %d", self2->cnt % 1000);
+	}
+
+	return string;
 }
 static void list_delete(object_t *this)
 {
+	list_t *self = base_of(this, list_t);
+	list_internal_t *self2 = base_of(self, list_internal_t);
+	while (self2->cnt > 0) {
+		list_pop_front(self);
+	}
+
 	mm_free(this);
 }
 
@@ -76,7 +94,7 @@ bool list_push_back(list_t *this, list_node_t *item)
 			self->last->next = item;
 		}
 		self->last = item;
-
+		self->cnt++;
 		ret = true;
 	}
 	return ret;
@@ -97,6 +115,7 @@ list_node_t *list_pop_front(list_t *this)
 			self->first = first;
 			node->next = NULL;
 			node->owner = NULL;
+			self->cnt--;
 		}
 	}
 	return node;

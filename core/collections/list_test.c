@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include "collections/list.h"
 #include "common/common.h"
+#include "os/memmgr.h"
 #include "tests/memmgr_mock.h"
 #include "unity_fixture.h"
 
@@ -69,10 +70,12 @@ TEST_GROUP_RUNNER(list)
 	RUN_TEST_CASE(list, push_back_1_item);
 	RUN_TEST_CASE(list, push_back_many_item);
 	RUN_TEST_CASE(list, push_back_already_listed);
+	RUN_TEST_CASE(list, to_string_show_item_count);
 	RUN_TEST_CASE(list, pop_front_null_does_no_harm);
 	RUN_TEST_CASE(list, pop_front_0_item);
 	RUN_TEST_CASE(list, pop_front_1_item);
 	RUN_TEST_CASE(list, pop_front_n_item);
+	RUN_TEST_CASE(list, delete_unlist_items);
 }
 
 TEST_SETUP(list)
@@ -140,6 +143,17 @@ TEST(list, push_back_already_listed)
 	object_delete(&list->base);
 }
 
+TEST(list, to_string_show_item_count)
+{
+	list_push_back(gs_list, &gs_item_1.node);
+	list_push_back(gs_list, &gs_item_2.node);
+	list_push_back(gs_list, &gs_item_3.node);
+
+	char *s = object_to_string(&gs_list->base);
+	TEST_ASSERT_EQUAL_STRING("list: 3", s);
+	mm_free(s);
+}
+
 TEST(list, pop_front_null_does_no_harm)
 {
 	TEST_ASSERT_NULL(list_pop_front(NULL));
@@ -178,5 +192,19 @@ TEST(list, pop_front_n_item)
 	TEST_ASSERT_CHAIN(gs_list, NULL, &gs_item_3, NULL);
 
 	TEST_ASSERT_EQUAL_PTR(&gs_item_3.node, list_pop_front(gs_list));
+	TEST_ASSERT_CHAIN(NULL, NULL, &gs_item_3, NULL);
+}
+
+TEST(list, delete_unlist_items)
+{
+	list_t *list = list_create();
+
+	list_push_back(list, &gs_item_1.node);
+	list_push_back(list, &gs_item_2.node);
+	list_push_back(list, &gs_item_3.node);
+
+	object_delete(&list->base);
+	TEST_ASSERT_CHAIN(NULL, NULL, &gs_item_1, NULL);
+	TEST_ASSERT_CHAIN(NULL, NULL, &gs_item_2, NULL);
 	TEST_ASSERT_CHAIN(NULL, NULL, &gs_item_3, NULL);
 }
