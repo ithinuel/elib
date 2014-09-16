@@ -18,7 +18,7 @@ OS_SRCS = \
 	$(OS_DIR)/task.c \
 	$(OS_DIR)/task_test.c \
 	$(OS_DIR)/mutex.c \
-	$(OS_DIR)/test_mutex.c \
+	$(OS_DIR)/mutex_test.c \
 	$(OS_DIR)/system.c
 	
 OS_CFLAGS += -include "unity_fixture.h"

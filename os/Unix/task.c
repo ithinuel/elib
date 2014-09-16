@@ -70,14 +70,19 @@ static void task_delete(object_t *base)
 
 static char *task_to_string(object_t *base)
 {
-	const char *prefix = "task: ";
 	task_t *this = base_of(base, task_t);
 	task_internal_t *self = base_of(this, task_internal_t);
-	char * string = malloc(strlen(prefix) + strlen(self->name) + 1);
+
+	const char *prefix = "task: ";
+	uint32_t prefix_len = strlen(prefix);
+	uint32_t name_len = strlen(self->name);
+	uint32_t total = prefix_len + name_len;
+
+	char * string = malloc(total + 1);
 	if (string != NULL) {
-		strcpy(string, prefix);
-		strcpy(string + strlen(prefix), self->name);
-		string[strlen(prefix) + strlen(self->name)] = '\0';
+		strncpy(string, prefix, prefix_len);
+		strncpy(string + prefix_len, self->name, name_len);
+		string[total] = '\0';
 	}
 	return string;
 }

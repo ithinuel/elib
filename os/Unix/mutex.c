@@ -22,6 +22,7 @@
 #include "common/common.h"
 #include "os/memmgr.h"
 #include "os/mutex.h"
+#include "utils/cstring.h"
 
 /* Types ---------------------------------------------------------------------*/
 typedef struct
@@ -50,7 +51,7 @@ static void mutex_obj_delete(object_t *self)
 static char *mutex_obj_to_string(object_t *self)
 {
 	unix_mutex_t *this = base_of(base_of(self, mutex_t), unix_mutex_t);
-	return (char *)this->name;
+	return cstring_dup(this->name);
 }
 
 mutex_t *mutex_new(bool locked, const char *name)
