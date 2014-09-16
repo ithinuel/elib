@@ -68,7 +68,7 @@ TEST_GROUP_RUNNER(cexcept) {
 	RUN_TEST_CASE(cexcept, Try_Finally_Throw_EndTry);
 	RUN_TEST_CASE(cexcept, Try_Throw_Finally_Throw_EndTry);
 
-	RUN_TEST_CASE(cexcept, ReThrow_from_dynamicaly_allocated_Thrown_message_dont_leak);
+	RUN_TEST_CASE(cexcept, ReThrow_from_dynamically_allocated_Thrown_message_dont_leak);
 }
 
 TEST_SETUP(cexcept)
@@ -596,9 +596,10 @@ TEST(cexcept, Try_Throw_Finally_Throw_EndTry) {
 	TEST_ASSERT_FALSE(did_finally_end);
 }
 
-TEST(cexcept, ReThrow_from_dynamicaly_allocated_Thrown_message_dont_leak)
+TEST(cexcept, ReThrow_from_dynamically_allocated_Thrown_message_dont_leak)
 {
 	const char *hello = "Hello";
+	const char *real_bad_luck = "real bad luck";
 	Try {
 		Try {
 			Try {
@@ -608,12 +609,14 @@ TEST(cexcept, ReThrow_from_dynamicaly_allocated_Thrown_message_dont_leak)
 			EndTry
 		}
 		Catch {
-			Throw("arg", "real bad luck", false);
+			TEST_ASSERT_EQUAL_STRING(hello, cexcept_message(e));
+			char *badluck = cstring_dup(real_bad_luck);
+			Throw("arg", badluck, true);
 		}
 		EndTry
 	}
 	Catch {
-
+		TEST_ASSERT_EQUAL_STRING(real_bad_luck, cexcept_message(e));
 	}
 	EndTry
 }
