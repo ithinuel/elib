@@ -29,6 +29,8 @@ TEST_GROUP(mutex);
 TEST_GROUP_RUNNER(mutex)
 {
 	RUN_TEST_CASE(mutex, to_string);
+	RUN_TEST_CASE(mutex, lock_null_should_die);
+	RUN_TEST_CASE(mutex, unlock_null_should_die);
 }
 
 TEST_SETUP(mutex)
@@ -50,4 +52,18 @@ TEST(mutex, to_string)
 	char *string = object_to_string(&gs_mtx->base);
 	TEST_ASSERT_EQUAL_STRING("unit_tests", string);
 	mm_free(string);
+}
+
+TEST(mutex, lock_null_should_die)
+{
+	EXPECT_ABORT_BEGIN
+	mutex_lock(NULL, -1);
+	VERIFY_FAILS_END("null mutex");
+}
+
+TEST(mutex, unlock_null_should_die)
+{
+	EXPECT_ABORT_BEGIN
+	mutex_unlock(NULL);
+	VERIFY_FAILS_END("null mutex");
 }
