@@ -24,7 +24,7 @@ static volatile uint32_t gs_counter = 0;
 
 static void task_test_routine(void *arg)
 {
-	while(true)
+	while(!task_must_stop(gs_tsk))
 	{
 		gs_counter++;
 		task_delay_ms(1);

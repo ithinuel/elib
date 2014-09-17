@@ -28,11 +28,12 @@ typedef struct
 {
 	task_t		base;
 	pthread_t	thread;
-	task_start_f	routine;
+	task_method_f	routine;
 	void *		arg;
 	uint32_t	stack_size;
 	uint32_t	priority;
 	char *		name;
+	bool		must_stop;
 }	task_internal_t;
 
 /* Prototypes ----------------------------------------------------------------*/
@@ -104,7 +105,7 @@ void task_cexcept_set_ctx(cexcept_ctx_t *ctx)
 }
 
 
-task_t *task_create(task_start_f routine, void *arg, uint32_t stack_size,
+task_t *task_create(task_method_f routine, void *arg, uint32_t stack_size,
 		    uint32_t priority, char *name)
 {
 
@@ -127,6 +128,7 @@ task_t *task_create(task_start_f routine, void *arg, uint32_t stack_size,
 bool task_start(task_t *this)
 {
 	task_internal_t *self = base_of(this, task_internal_t);
+	self->must_stop = false;
 	bool running = (pthread_create(&self->thread, NULL, task_wrapper, self) == 0);
 	if (running) {
 		gs_task_running_count++;
@@ -138,11 +140,19 @@ void task_stop(task_t *this)
 {
 	task_internal_t *self = base_of(this, task_internal_t);
 	if (self->thread != 0) {
-		pthread_cancel(self->thread);
+		self->must_stop = true;
 		pthread_join(self->thread, NULL);
 		self->thread = 0;
-		gs_task_running_count--;
 	}
+}
+
+bool task_must_stop(task_t *this)
+{
+	if (this == NULL) {
+		return true;
+	}
+	task_internal_t *self = base_of(this, task_internal_t);
+	return self->must_stop;
 }
 
 uint32_t task_running_count(void)
