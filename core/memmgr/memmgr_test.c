@@ -184,7 +184,7 @@ TEST(memmgr, calloc_zalloc_failed)
 TEST(memmgr, init)
 {
 	chunk_test_state_t a_expect[] = {
-			{9, true}, {CSIZE_MAX-9, false},
+			{19, true}, {CSIZE_MAX-19, false},
 			{CSIZE_MAX, false}, {CSIZE_MAX, false},
 			{CSIZE_MAX, false}, {CSIZE_MAX, false},
 			{CSIZE_MAX, false}, {CSIZE_MAX, false},
@@ -209,8 +209,8 @@ TEST(memmgr, info)
 	chunk_test_fill_with_prepare(g_first, 'A');
 	mm_info_t a_expect[] = {
 			{
-				.size = 16,
-				.csize = 9,
+				.size = 56,
+				.csize = 19,
 				.allocated = true,
 				.allocator = NULL
 			},
@@ -222,7 +222,7 @@ TEST(memmgr, info)
 			},
 			{
 				.size = 0,
-				.csize = 32705,
+				.csize = 32695,
 				.allocated = false,
 				.allocator = NULL
 			},

@@ -19,9 +19,20 @@
 #include "tests/memmgr_unity.h"
 #include "os/memmgr.h"
 #include "os/mutex.h"
+#include "os/task.h"
 
 /*----------------------------------------------------------------------------*/
 static mutex_t *gs_mtx = NULL;
+static bool gs_test_mtx = false;
+
+void test_mutex(void *arg)
+{
+	if (mutex_lock(gs_mtx, 50)) {
+		gs_test_mtx = true;
+		task_delay_ms(250);
+		mutex_unlock(gs_mtx);
+	}
+}
 
 /* Test group definitions ----------------------------------------------------*/
 TEST_GROUP(mutex);
@@ -31,13 +42,20 @@ TEST_GROUP_RUNNER(mutex)
 	RUN_TEST_CASE(mutex, to_string);
 	RUN_TEST_CASE(mutex, lock_null_should_die);
 	RUN_TEST_CASE(mutex, unlock_null_should_die);
+
+	RUN_TEST_CASE(mutex, lock_once);
+	RUN_TEST_CASE(mutex, lock_recursive);
+	RUN_TEST_CASE(mutex, unlock_once);
+	RUN_TEST_CASE(mutex, unlock_recursive);
+
+	RUN_TEST_CASE(mutex, lock_fail_on_multithread);
 }
 
 TEST_SETUP(mutex)
 {
 	unity_mock_setup();
 	gs_mtx = mutex_new(false, "unit_tests");
-
+	gs_test_mtx = false;
 }
 
 TEST_TEAR_DOWN(mutex)
@@ -67,3 +85,48 @@ TEST(mutex, unlock_null_should_die)
 	mutex_unlock(NULL);
 	VERIFY_FAILS_END("null mutex");
 }
+
+TEST(mutex, lock_once)
+{
+	TEST_ASSERT_TRUE(mutex_lock(gs_mtx, -1));
+}
+
+TEST(mutex, lock_recursive)
+{
+	TEST_ASSERT_TRUE(mutex_lock(gs_mtx, -1));
+	TEST_ASSERT_TRUE(mutex_lock(gs_mtx, -1));
+}
+
+TEST(mutex, unlock_once)
+{
+	mutex_unlock(gs_mtx);
+}
+
+TEST(mutex, unlock_recursive)
+{
+	mutex_unlock(gs_mtx);
+	mutex_unlock(gs_mtx);
+}
+
+TEST(mutex, lock_fail_on_multithread)
+{
+	task_t *tsk = task_create(test_mutex, NULL, 0, 0, "test_mutex");
+
+	TEST_ASSERT_TRUE(mutex_lock(gs_mtx, -1));
+	task_start(tsk);
+	task_delay_ms(250);
+	TEST_ASSERT_FALSE(gs_test_mtx);
+	task_stop(tsk);
+	mutex_unlock(gs_mtx);
+
+	task_start(tsk);
+	task_delay_ms(10);
+	TEST_ASSERT_FALSE(mutex_lock(gs_mtx, 10));
+	task_delay_ms(250);
+	TEST_ASSERT_TRUE(gs_test_mtx);
+	TEST_ASSERT_TRUE(mutex_lock(gs_mtx, -1));
+
+	object_delete(&tsk->base);
+}
+
+
