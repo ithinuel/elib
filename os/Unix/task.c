@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "common/common.h"
 #include "os/task.h"
 
@@ -27,17 +28,19 @@ typedef struct
 {
 	task_t		base;
 	pthread_t	thread;
-	task_start_f	routine;
+	task_method_f	routine;
 	void *		arg;
 	uint32_t	stack_size;
 	uint32_t	priority;
 	char *		name;
+	bool		must_stop;
 }	task_internal_t;
 
 /* Prototypes ----------------------------------------------------------------*/
 static void *		task_wrapper		(void *arg);
 static void		task_delete		(object_t *base);
 static char *		task_to_string		(object_t *base);
+static void		task_delay_ms_internal	(int32_t ms);
 
 /* Variables -----------------------------------------------------------------*/
 static cexcept_ctx_t *gs_ctx = NULL;
@@ -46,6 +49,8 @@ static object_ops_t gs_obj_ops = {
 	.to_string = task_to_string
 };
 static volatile uint32_t gs_task_running_count = 0;
+
+task_delay_ms_f	task_delay_ms = task_delay_ms_internal;
 
 /* Private functions ---------------------------------------------------------*/
 static void *task_wrapper(void *arg)
@@ -66,16 +71,26 @@ static void task_delete(object_t *base)
 
 static char *task_to_string(object_t *base)
 {
-	const char *prefix = "task: ";
 	task_t *this = base_of(base, task_t);
 	task_internal_t *self = base_of(this, task_internal_t);
-	char * string = malloc(strlen(prefix) + strlen(self->name) + 1);
+
+	const char *prefix = "task: ";
+	uint32_t prefix_len = strlen(prefix);
+	uint32_t name_len = strlen(self->name);
+	uint32_t total = prefix_len + name_len;
+
+	char * string = malloc(total + 1);
 	if (string != NULL) {
-		strcpy(string, prefix);
-		strcpy(string + strlen(prefix), self->name);
-		string[strlen(prefix) + strlen(self->name)] = '\0';
+		strncpy(string, prefix, prefix_len);
+		strncpy(string + prefix_len, self->name, name_len);
+		string[total] = '\0';
 	}
 	return string;
+}
+
+static void task_delay_ms_internal(int32_t ms)
+{
+	usleep(ms * 1000);
 }
 
 /* Functions definitions -----------------------------------------------------*/
@@ -90,7 +105,7 @@ void task_cexcept_set_ctx(cexcept_ctx_t *ctx)
 }
 
 
-task_t *task_create(task_start_f routine, void *arg, uint32_t stack_size,
+task_t *task_create(task_method_f routine, void *arg, uint32_t stack_size,
 		    uint32_t priority, char *name)
 {
 
@@ -113,6 +128,7 @@ task_t *task_create(task_start_f routine, void *arg, uint32_t stack_size,
 bool task_start(task_t *this)
 {
 	task_internal_t *self = base_of(this, task_internal_t);
+	self->must_stop = false;
 	bool running = (pthread_create(&self->thread, NULL, task_wrapper, self) == 0);
 	if (running) {
 		gs_task_running_count++;
@@ -124,10 +140,19 @@ void task_stop(task_t *this)
 {
 	task_internal_t *self = base_of(this, task_internal_t);
 	if (self->thread != 0) {
-		pthread_cancel(self->thread);
+		self->must_stop = true;
+		pthread_join(self->thread, NULL);
 		self->thread = 0;
-		gs_task_running_count--;
 	}
+}
+
+bool task_must_stop(task_t *this)
+{
+	if (this == NULL) {
+		return true;
+	}
+	task_internal_t *self = base_of(this, task_internal_t);
+	return self->must_stop;
 }
 
 uint32_t task_running_count(void)

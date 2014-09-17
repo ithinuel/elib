@@ -54,33 +54,17 @@ TEST_TEAR_DOWN(task_mock)
 
 TEST(task_mock, fail_on_unexpected_delay)
 {
-	if (TEST_PROTECT()) {
-		task_delay_ms(10);
-	}
-
-	TEST_ASSERT_EQUAL_MESSAGE(1, Unity.CurrentTestFailed,
-				  "This test should have failed");
-	if (Unity.CurrentTestFailed == 1) {
-		Unity.CurrentTestFailed = 0;
-		UnityPrint("===== this is an expected failure =====");
-	}
+	EXPECT_ABORT_BEGIN
+	task_delay_ms(10);
+	VERIFY_FAILS_END("Unexpected call to task_delay_ms");
 }
 
 TEST(task_mock, fail_on_wrong_delay_argument)
 {
 	task_delay_ms_ExpectNthenCbk(10, 1, NULL);
-	if (TEST_PROTECT()) {
-		task_delay_ms(5);
-	}
-
-	TEST_ASSERT_EQUAL_MESSAGE(1, Unity.CurrentTestFailed,
-				  "This test should have failed");
-
-	if (Unity.CurrentTestFailed == 1) {
-		Unity.CurrentTestFailed = 0;
-		UnityPrint("===== this is an expected failure =====");
-		task_delay_ms(10);
-	}
+	EXPECT_ABORT_BEGIN
+	task_delay_ms(5);
+	VERIFY_FAILS_END("Expected 10 Was 5");
 }
 
 TEST(task_mock, expect_1_delay)
@@ -113,15 +97,7 @@ TEST(task_mock, thencbk_called_once_at_the_end)
 TEST(task_mock, verify_clean_expectation_stack)
 {
 	task_delay_ms_ExpectNthenCbk(10, 1, NULL);
-	if (TEST_PROTECT()) {
-		task_mock_delay_ms_verify();
-	}
-
-	TEST_ASSERT_EQUAL_MESSAGE(1, Unity.CurrentTestFailed,
-				  "This test should have failed");
-
-	if (Unity.CurrentTestFailed == 1) {
-		Unity.CurrentTestFailed = 0;
-		UnityPrint("===== this is an expected failure =====");
-	}
+	EXPECT_ABORT_BEGIN
+	task_mock_delay_ms_verify();
+	VERIFY_FAILS_END("missing call to task_delay_ms");
 }

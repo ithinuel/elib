@@ -16,7 +16,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdlib.h>
-#include <unistd.h>
 #include "unity_fixture.h"
 #include "os/task.h"
 
@@ -25,10 +24,10 @@ static volatile uint32_t gs_counter = 0;
 
 static void task_test_routine(void *arg)
 {
-	while(true)
+	while(!task_must_stop(gs_tsk))
 	{
 		gs_counter++;
-		usleep(1000);
+		task_delay_ms(1);
 	}
 }
 
@@ -39,6 +38,8 @@ TEST_GROUP_RUNNER(task)
 	RUN_TEST_CASE(task, alloc_failure_returns_null);
 	RUN_TEST_CASE(task, delete_cancel_thread);
 	RUN_TEST_CASE(task, count_running_tasks);
+
+	RUN_TEST_CASE(task, null_task_should_always_stop);
 }
 
 TEST_SETUP(task)
@@ -69,13 +70,13 @@ TEST(task, delete_cancel_thread)
 {
 	task_start(gs_tsk);
 	uint32_t val1 = gs_counter;
-	usleep(10000);
+	task_delay_ms(10);
 	uint32_t val2 = gs_counter;
 	TEST_ASSERT_MESSAGE((val1 != val2), "Task is not running");
 
 	task_stop(gs_tsk);
 	val1 = gs_counter;
-	usleep(10000);
+	task_delay_ms(10);
 	val2 = gs_counter;
 	TEST_ASSERT_MESSAGE((val1 == val2), "Task is still running");
 
@@ -88,4 +89,9 @@ TEST(task, count_running_tasks)
 	TEST_ASSERT_EQUAL_UINT32(2, task_running_count());
 	task_stop(gs_tsk);
 	TEST_ASSERT_EQUAL_UINT32(1, task_running_count());
+}
+
+TEST(task, null_task_should_always_stop)
+{
+	TEST_ASSERT_TRUE(task_must_stop(NULL));
 }

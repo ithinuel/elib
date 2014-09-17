@@ -25,7 +25,7 @@
 
 /* Public types --------------------------------------------------------------*/
 typedef void		(*task_delay_ms_f)		(int32_t ms);
-typedef void		(*task_start_f)			(void *arg);
+typedef void		(*task_method_f)		(void *arg);
 typedef struct
 {
 	object_t	base;
@@ -51,13 +51,14 @@ void			task_cexcept_set_ctx		(cexcept_ctx_t *);
  * @param	priority	Task priority.
  * @return Create task or NULL.
  */
-task_t *		task_create			(task_start_f routine,
+task_t *		task_create			(task_method_f routine,
 							 void *arg,
 							 uint32_t stack_size,
 							 uint32_t priority,
 							 char *name);
 bool			task_start			(task_t *this);
 void			task_stop			(task_t *this);
+bool			task_must_stop			(task_t *this);
 uint32_t		task_running_count		(void);
 
 #endif

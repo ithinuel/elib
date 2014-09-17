@@ -37,13 +37,9 @@ static mm_chunk_t *gs_chnk = (mm_chunk_t *)gs_raw;
 /* functions's definitions */
 static void eval_validate_xorsum(void)
 {
-	die_Expect("MM: xorsum");
-	VERIFY_DIE_START
-	
+	EXPECT_ABORT_BEGIN
 	mm_chunk_validate(gs_chnk);
-	
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: xorsum");
 }
 
 /* Test group definitions ----------------------------------------------------*/
@@ -79,42 +75,28 @@ TEST(mm_chunk_validate, validate)
 
 TEST(mm_chunk_validate, validate_alignment)
 {
-	die_Expect("MM: alignment");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mm_chunk_validate((mm_chunk_t *)((uintptr_t)gs_chnk + 1));
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: alignment");
 }
 
 TEST(mm_chunk_validate, validate_out_of_bound)
 {
-	die_Expect("MM: out of bound");
-	VERIFY_DIE_START
-	
+	EXPECT_ABORT_BEGIN
 	mm_chunk_validate((mm_chunk_t *)(gs_raw-MM_CFG_ALIGNMENT));
+	VERIFY_FAILS_END("MM: out of bound");
 	
-	VERIFY_DIE_END
-	die_Verify();
-	
-	die_Expect("MM: out of bound");
-	VERIFY_DIE_START
-	
+	EXPECT_ABORT_BEGIN
 	mm_chunk_validate((mm_chunk_t *)(gs_raw+MM_CFG_ALIGNMENT));
-	
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: out of bound");
 }
 
 TEST(mm_chunk_validate, validate_overflow)
 {
-	die_Expect("MM: overflowed");
-	VERIFY_DIE_START
-
+	EXPECT_ABORT_BEGIN
 	memset(mm_toptr(gs_chnk), 0, 1);
 	mm_chunk_validate(gs_chnk);
-
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: overflowed");
 }
 
 TEST(mm_chunk_validate, validate_corruption_prev_size)

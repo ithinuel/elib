@@ -18,34 +18,37 @@
 #include "unity_fixture.h"
 #include "tests/memmgr_unity.h"
 #include "os/memmgr.h"
-#include "os/mutex.h"
+#include "utils/cstring.h"
 
-/*----------------------------------------------------------------------------*/
-static mutex_t *gs_mtx = NULL;
 
 /* Test group definitions ----------------------------------------------------*/
-TEST_GROUP(mutex);
+TEST_GROUP(cstring);
 
-TEST_GROUP_RUNNER(mutex)
+TEST_GROUP_RUNNER(cstring)
 {
-	RUN_TEST_CASE(mutex, to_string);
+	RUN_TEST_CASE(cstring, dup_null_is_ok);
+	RUN_TEST_CASE(cstring, dup_can_be_freed);
 }
 
-TEST_SETUP(mutex)
+TEST_SETUP(cstring)
 {
 	unity_mock_setup();
-	gs_mtx = mutex_new(false, "unit_tests");
-
 }
 
-TEST_TEAR_DOWN(mutex)
+TEST_TEAR_DOWN(cstring)
 {
-	object_delete(&gs_mtx->base);
-	gs_mtx = NULL;
+
 }
 
 /* Tests ---------------------------------------------------------------------*/
-TEST(mutex, to_string)
+TEST(cstring, dup_null_is_ok)
 {
-	TEST_ASSERT_EQUAL_STRING("unit_tests", object_to_string(&gs_mtx->base));
+	TEST_ASSERT_NULL(cstring_dup(NULL));
+}
+
+TEST(cstring, dup_can_be_freed)
+{
+	char *s = cstring_dup("Bonjour");
+	TEST_ASSERT_EQUAL_STRING("Bonjour", s);
+	mm_free(s);
 }

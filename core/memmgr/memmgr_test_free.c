@@ -130,9 +130,7 @@ TEST(memmgr_free, double_free_leads_to_death)
 	mm_chunk_validate(g_first);
 	TEST_ASSERT_FALSE(g_first->allocated);
 
-	die_Expect("MM: double free");
-	VERIFY_DIE_START
+	EXPECT_ABORT_BEGIN
 	mm_free(ptr);
-	VERIFY_DIE_END
-	die_Verify();
+	VERIFY_FAILS_END("MM: double free");
 }

@@ -24,7 +24,7 @@
 struct cexcept
 {
 	const char *	type;
-	const char *	message;
+	char *		message;
 	bool		is_dynamic;
 
 };

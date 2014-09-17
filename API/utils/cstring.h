@@ -14,19 +14,14 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_MEMMGR_MOCK_H__
-#define __TESTS_MEMMGR_MOCK_H__
+#ifndef __UTILS_STRING_H__
+#define __UTILS_STRING_H__
 
-/* Includes ------------------------------------------------------------------*/
-#include <stdint.h>
-
-/* Prototypes ----------------------------------------------------------------*/
-void			mock_memmgr_setup		(void);
-void			mock_mm_alloc_Expect		(uint32_t size);
-void			mock_mm_alloc_ExpectAndReturn	(uint32_t size,
-							 void *ret);
-void			mock_mm_alloc_IgnoreAndReturn	(void *ret);
-void			mock_mm_free_Expect		(void *ptr);
-void			mock_memmgr_verify		(void);
+/**
+ * Duplicate the string.
+ * @param	str	String to duplicate.
+ * @return	new string or NULL.
+ */
+char *		cstring_dup		(const char *str);
 
 #endif

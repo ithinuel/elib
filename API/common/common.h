@@ -22,8 +22,10 @@
 #include <stdbool.h>
 
 /* Macros --------------------------------------------------------------------*/
+#define		container_of(ptr, type, member) \
+	(type *)((uintptr_t)ptr - __builtin_offsetof(type, member))
 #define		base_of(ptr, type) \
-	(type *)((uintptr_t)ptr - __builtin_offsetof(type, base))
+	container_of(ptr, type, base)
 
 /* Public functions ----------------------------------------------------------*/
 /**

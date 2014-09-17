@@ -21,32 +21,9 @@
 #include "os/system.h"
 #include "mcp/mcp.h"
 
-jmp_buf g_on_die;
-static char *gs_expected_cause = NULL;
-
 void die(const char *reason)
 {
-	if (gs_expected_cause != NULL) {
-		TEST_ASSERT_EQUAL_STRING(gs_expected_cause, reason);
-		gs_expected_cause= NULL;
-		longjmp(g_on_die, 1);
-	} else {
-		TEST_FAIL_MESSAGE(reason);
-		/* test fail may return on  teardown */
-		exit(1);
-	}
-}
-
-void die_Expect(char *expected_cause)
-{
-	gs_expected_cause = expected_cause;
-}
-
-void die_Verify(void)
-{
-	if (gs_expected_cause != NULL) {
-		TEST_FAIL_MESSAGE("This test should have died");
-	}
+	TEST_FAIL_MESSAGE(reason);
 }
 
 int main(int argc, char **argv, char **arge)

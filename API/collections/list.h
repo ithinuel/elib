@@ -14,19 +14,30 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_MEMMGR_MOCK_H__
-#define __TESTS_MEMMGR_MOCK_H__
-
+#ifndef __COLLECTIONS_LIST_H__
+#define __COLLECTIONS_LIST_H__
 /* Includes ------------------------------------------------------------------*/
-#include <stdint.h>
+#include <stdbool.h>
+#include "common/object.h"
 
-/* Prototypes ----------------------------------------------------------------*/
-void			mock_memmgr_setup		(void);
-void			mock_mm_alloc_Expect		(uint32_t size);
-void			mock_mm_alloc_ExpectAndReturn	(uint32_t size,
-							 void *ret);
-void			mock_mm_alloc_IgnoreAndReturn	(void *ret);
-void			mock_mm_free_Expect		(void *ptr);
-void			mock_memmgr_verify		(void);
+/* Types ---------------------------------------------------------------------*/
+typedef struct
+{
+	object_t	base;
+}	list_t;
+
+typedef struct _list_node_t	list_node_t;
+
+struct _list_node_t
+{
+	list_t		*owner;
+	list_node_t	*prev;
+	list_node_t	*next;
+};
+
+list_t	*		list_create		(void);
+bool			list_push_back		(list_t *this,
+						 list_node_t *item);
+list_node_t *		list_pop_front		(list_t *this);
 
 #endif

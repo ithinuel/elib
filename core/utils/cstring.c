@@ -14,19 +14,27 @@
 	limitations under the License.
 */
 
-#ifndef __TESTS_MEMMGR_MOCK_H__
-#define __TESTS_MEMMGR_MOCK_H__
-
 /* Includes ------------------------------------------------------------------*/
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
-/* Prototypes ----------------------------------------------------------------*/
-void			mock_memmgr_setup		(void);
-void			mock_mm_alloc_Expect		(uint32_t size);
-void			mock_mm_alloc_ExpectAndReturn	(uint32_t size,
-							 void *ret);
-void			mock_mm_alloc_IgnoreAndReturn	(void *ret);
-void			mock_mm_free_Expect		(void *ptr);
-void			mock_memmgr_verify		(void);
+#include "os/memmgr.h"
+#include "utils/cstring.h"
 
-#endif
+/* Functions -----------------------------------------------------------------*/
+char *cstring_dup(const char *str)
+{
+	char *res = NULL;
+	if (str == NULL) {
+		return NULL;
+	}
+	uint32_t len = strlen(str);
+	res = mm_alloc(len + 1);
+
+	if (res != NULL) {
+		strncpy(res, str, len);
+		res[len] = '\0';
+	}
+	return res;
+}

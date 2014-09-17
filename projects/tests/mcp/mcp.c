@@ -31,18 +31,24 @@ system_entry_t g_mcp_entry  =
 
 static void runAllTests()
 {
+	RUN_TEST_GROUP(chunk_mock);
+	RUN_TEST_GROUP(memmgr_mock);
+	RUN_TEST_GROUP(task_mock);
+
 	RUN_TEST_GROUP(mm_chunk);
 	RUN_TEST_GROUP(memmgr);
+	RUN_TEST_GROUP(cstring);
 	RUN_TEST_GROUP(cexcept);
 	RUN_TEST_GROUP(object);
 	RUN_TEST_GROUP(mutex);
 	RUN_TEST_GROUP(spinlock);
 	RUN_TEST_GROUP(stream);
 	RUN_TEST_GROUP(task);
-	RUN_TEST_GROUP(task_mock);
+	RUN_TEST_GROUP(list);
 }
 
 static void mcp_entry(void)
 {
-	UnityMain(0, NULL, runAllTests);
+	char *argv[2] = { "unit test", NULL };
+	UnityMain(1, argv, runAllTests);
 }

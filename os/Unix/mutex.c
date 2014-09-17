@@ -22,12 +22,14 @@
 #include "common/common.h"
 #include "os/memmgr.h"
 #include "os/mutex.h"
+#include "utils/cstring.h"
 
 /* Types ---------------------------------------------------------------------*/
 typedef struct
 {
-	mutex_t base;
-	const char *name;
+	mutex_t		base;
+	const char	*name;
+	pthread_mutex_t	mtx;
 } unix_mutex_t;
 
 /* Prototypes ----------------------------------------------------------------*/
@@ -50,7 +52,7 @@ static void mutex_obj_delete(object_t *self)
 static char *mutex_obj_to_string(object_t *self)
 {
 	unix_mutex_t *this = base_of(base_of(self, mutex_t), unix_mutex_t);
-	return (char *)this->name;
+	return cstring_dup(this->name);
 }
 
 mutex_t *mutex_new(bool locked, const char *name)
@@ -61,6 +63,11 @@ mutex_t *mutex_new(bool locked, const char *name)
 		this->base.base.ops = &gs_mutex_object_ops;
 		this->name = name;
 		base = &(this->base);
+
+		pthread_mutexattr_t attr;
+		pthread_mutexattr_init(&attr);
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&this->mtx, &attr);
 	}
 	return base;
 }
@@ -70,7 +77,13 @@ bool mutex_lock(mutex_t *self, int32_t ms)
 	if (self == NULL) {
 		die("null mutex");
 	}
-	return true;
+	unix_mutex_t *this = base_of(self, unix_mutex_t);
+
+	struct timespec t = {0};
+	t.tv_sec = ms/1000;
+	t.tv_nsec = (ms - 1000*t.tv_sec) * 1000000;
+
+	return (pthread_mutex_timedlock(&this->mtx, &t) == 0);
 }
 
 void mutex_unlock(mutex_t *self)
@@ -78,4 +91,6 @@ void mutex_unlock(mutex_t *self)
 	if (self == NULL) {
 		die("null mutex");
 	}
+	unix_mutex_t *this = base_of(self, unix_mutex_t);
+	pthread_mutex_unlock(&this->mtx);
 }
