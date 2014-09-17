@@ -38,6 +38,8 @@ TEST_GROUP_RUNNER(task)
 	RUN_TEST_CASE(task, alloc_failure_returns_null);
 	RUN_TEST_CASE(task, delete_cancel_thread);
 	RUN_TEST_CASE(task, count_running_tasks);
+
+	RUN_TEST_CASE(task, null_task_should_always_stop);
 }
 
 TEST_SETUP(task)
@@ -87,4 +89,9 @@ TEST(task, count_running_tasks)
 	TEST_ASSERT_EQUAL_UINT32(2, task_running_count());
 	task_stop(gs_tsk);
 	TEST_ASSERT_EQUAL_UINT32(1, task_running_count());
+}
+
+TEST(task, null_task_should_always_stop)
+{
+	TEST_ASSERT_TRUE(task_must_stop(NULL));
 }
